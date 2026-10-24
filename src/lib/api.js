@@ -20,3 +20,9 @@ export const api = {
   game: (appid) => request(`/api/games/${appid}`),
   logout: () => request('/auth/logout', { method: 'POST' }),
 };
+
+/** Déconnexion puis retour à la page de connexion. */
+export async function logout() {
+  await api.logout().catch(() => {});
+  window.location.assign('/');
+}
