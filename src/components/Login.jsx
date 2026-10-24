@@ -15,7 +15,7 @@ export function Login() {
   const failed = new URLSearchParams(window.location.search).get('login') === 'failed';
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
+    <main className="relative flex min-h-dvh items-center justify-center overflow-hidden px-4 py-16 sm:py-20">
       <AuroraBackground />
       <motion.div
         initial={{ opacity: 0, y: 30 }}
@@ -24,17 +24,17 @@ export function Login() {
         className="relative z-10 w-full max-w-xl text-center"
       >
         <p className="mb-4 text-sm font-medium uppercase tracking-[0.3em] text-muted-foreground">PlayTrace</p>
-        <h1 className="text-4xl font-bold leading-tight sm:text-6xl">
+        <h1 className="text-[clamp(2.25rem,9vw,4rem)] font-bold leading-[1.05]">
           Ton Steam Wrapped,
           <br />
           <span className="text-gradient">en temps réel.</span>
         </h1>
-        <p className="mx-auto mt-6 max-w-md text-muted-foreground">
+        <p className="mx-auto mt-5 max-w-md text-sm text-muted-foreground sm:mt-6 sm:text-base">
           PlayTrace détecte ce que tu joues, enregistre chaque session et affiche tes stats pendant que tu joues.
         </p>
 
-        <div className="relative mx-auto mt-10 w-fit rounded-lg">
-          <a href="/auth/steam" className={cn(buttonVariants({ size: 'lg' }), 'relative bg-secondary text-foreground hover:bg-secondary/70')}>
+        <div className="relative mx-auto mt-8 w-full rounded-lg sm:mt-10 sm:w-fit">
+          <a href="/auth/steam" className={cn(buttonVariants({ size: 'lg' }), 'relative w-full bg-secondary px-6 text-foreground hover:bg-secondary/70')}>
             <Gamepad2 />
             Se connecter avec Steam
           </a>
@@ -47,7 +47,7 @@ export function Login() {
           </p>
         )}
 
-        <ul className="mx-auto mt-12 grid max-w-md gap-3 text-left text-sm">
+        <ul className="mx-auto mt-10 grid max-w-md gap-2.5 text-left text-sm sm:mt-12 sm:gap-3">
           {FEATURES.map(({ icon: Icon, label }, index) => (
             <motion.li
               key={label}
