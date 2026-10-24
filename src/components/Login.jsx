@@ -1,5 +1,5 @@
 import { motion } from 'motion/react';
-import { Activity, Flame, Gamepad2, Radio } from 'lucide-react';
+import { Activity, Flame, Gamepad2, Lock, Radio } from 'lucide-react';
 import { AuroraBackground } from '@/components/ui/aurora-background';
 import { BorderBeam } from '@/components/ui/border-beam';
 import { buttonVariants } from '@/components/ui/button';
@@ -13,7 +13,9 @@ const FEATURES = [
 ];
 
 export function Login() {
-  const failed = new URLSearchParams(window.location.search).get('login') === 'failed';
+  const params = new URLSearchParams(window.location.search);
+  const failed = params.get('login') === 'failed';
+  const deleted = params.get('compte') === 'supprime';
 
   return (
     <>
@@ -43,6 +45,16 @@ export function Login() {
             <BorderBeam />
           </div>
 
+          <p className="mx-auto mt-4 max-w-sm text-xs leading-relaxed text-muted-foreground">
+            <Lock className="mr-1 inline size-3 -translate-y-px text-neon-lime" />
+            Tu seras redirigé vers <strong className="text-foreground">steamcommunity.com</strong> : vérifie l’adresse. PlayTrace ne te
+            demandera jamais ton mot de passe.
+          </p>
+
+          {deleted && (
+            <p role="status" className="mt-4 text-sm text-neon-lime">Ton compte et toutes tes données ont été supprimés.</p>
+          )}
+
           {failed && (
             <p role="alert" className="mt-4 text-sm text-destructive">
               La connexion Steam a échoué. Réessaie.
@@ -66,6 +78,10 @@ export function Login() {
 
           <p className="mt-8 text-xs text-muted-foreground">
             Ton profil et les détails de tes jeux doivent être <strong>publics</strong> sur Steam.
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            En te connectant, tu acceptes que PlayTrace enregistre tes sessions de jeu.{' '}
+            <a href="/confidentialite" className="text-neon-cyan hover:underline">Ce que PlayTrace fait de tes données</a>
           </p>
         </motion.div>
       </main>
