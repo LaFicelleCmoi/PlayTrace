@@ -3,6 +3,7 @@ import { Download, Hourglass, Pause, PackageCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { GameImage } from '@/components/GameImage';
 import { formatBytes, formatDuration, formatSpeed } from '@/lib/format';
+import { Link } from '@/lib/router';
 import { cn } from '@/lib/utils';
 
 const STATES = {
@@ -32,10 +33,14 @@ function DownloadRow({ download }) {
       transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
       className="flex items-center gap-3 rounded-xl border bg-card/80 p-3 backdrop-blur sm:gap-4"
     >
-      <GameImage appid={download.appid} alt={download.name} className="aspect-[460/215] w-16 shrink-0 rounded-md sm:w-28" />
+      <Link to={`/jeux/${download.appid}`} className="shrink-0 rounded-md">
+        <GameImage appid={download.appid} alt={download.name} className="aspect-[460/215] w-16 rounded-md sm:w-28" />
+      </Link>
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-3">
-          <p className="min-w-0 truncate text-sm font-semibold sm:text-base">{download.name}</p>
+          <Link to={`/jeux/${download.appid}`} className="min-w-0 truncate text-sm font-semibold hover:underline sm:text-base">
+            {download.name}
+          </Link>
           <Badge className={cn('shrink-0', className)}>
             <Icon className="size-3" />
             <span className="sr-only sm:not-sr-only">{label}</span>
