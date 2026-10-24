@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
-import { ArrowUp, ArrowUpRight, Bell, BellOff, BellRing, Gamepad2, LibraryBig, LogOut, MonitorSmartphone, Orbit, Radio, ShieldCheck, Sparkles, Swords, UserRound } from 'lucide-react';
+import { ArrowUp, ArrowUpRight, Bell, BellOff, BellRing, Gamepad2, LibraryBig, LogOut, MonitorSmartphone, Orbit, Radio, ShieldCheck, Sparkles, Swords, UserCog, UserRound } from 'lucide-react';
 import { siNodedotjs, siReact, siSteam, siSupabase, siTailwindcss, siVercel, siVite } from 'simple-icons';
 import { TextHoverEffect } from '@/components/ui/text-hover-effect';
 import { logout } from '@/lib/api';
@@ -228,8 +228,8 @@ export function Footer({ user, live }) {
 
             {user ? (
               <Column title="Ton compte">
+                <li><FooterLink to="/compte" icon={UserCog}>Mon compte et mes données</FooterLink></li>
                 <li><FooterLink href={`https://steamcommunity.com/profiles/${user.steamid}`} icon={UserRound}>Profil Steam</FooterLink></li>
-                <li><FooterLink href="https://steamcommunity.com/my/edit/settings" icon={ShieldCheck}>Confidentialité</FooterLink></li>
                 <li><NotificationToggle /></li>
                 <li>
                   <button type="button" onClick={logout} className={linkClass}>
@@ -241,7 +241,7 @@ export function Footer({ user, live }) {
             ) : (
               <Column title="Steam">
                 <li><FooterLink href="https://store.steampowered.com/" icon={Gamepad2}>Store Steam</FooterLink></li>
-                <li><FooterLink href="https://steamcommunity.com/my/edit/settings" icon={ShieldCheck}>Confidentialité</FooterLink></li>
+                <li><FooterLink to="/confidentialite" icon={ShieldCheck}>Confidentialité</FooterLink></li>
               </Column>
             )}
 
@@ -268,6 +268,11 @@ export function Footer({ user, live }) {
               © {year} PlayTrace · par <span className="text-foreground">LaFicelleCmoi</span>, fait avec ☕, du néon et beaucoup de parties de Steam.
             </p>
             <p className="text-muted-foreground/70">Projet indépendant, non affilié à Valve. Données fournies par l’API Web Steam.</p>
+            <p className="flex flex-wrap justify-center gap-x-3 gap-y-1 sm:justify-start">
+              <Link to="/confidentialite" className="hover:text-foreground">Confidentialité</Link>
+              <Link to="/mentions-legales" className="hover:text-foreground">Mentions légales</Link>
+              <a href="/.well-known/security.txt" className="hover:text-foreground">Signaler une faille</a>
+            </p>
           </div>
           <button
             type="button"
