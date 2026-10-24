@@ -219,8 +219,10 @@ export function Achievements({ achievements }) {
 
   const items = useMemo(() => {
     const test = FILTERS.find((option) => option.id === filter).test;
-    return achievements.items.filter(test).sort(SORTS.find((option) => option.id === sort).compare);
-  }, [achievements.items, filter, sort]);
+    const compare = SORTS.find((option) => option.id === sort).compare;
+    // Dans « Tous », les succès obtenus passent devant : la liste ne s'ouvre pas sur une série de cases grises.
+    return achievements.items.filter(test).sort((a, b) => (known ? b.achieved - a.achieved : 0) || compare(a, b));
+  }, [achievements.items, filter, sort, known]);
 
   if (achievements.status === 'none') {
     return (
