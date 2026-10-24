@@ -5,6 +5,7 @@ import { SpotlightCard } from '@/components/ui/spotlight-card';
 import { GameImage } from '@/components/GameImage';
 import { SectionTitle } from '@/components/SectionTitle';
 import { formatDuration } from '@/lib/format';
+import { Link } from '@/lib/router';
 
 const RANK_COLORS = ['text-neon-pink', 'text-neon-violet', 'text-neon-cyan', 'text-muted-foreground', 'text-muted-foreground'];
 
@@ -29,7 +30,8 @@ export function TopGames({ stats }) {
         <ol className="grid grid-cols-1 gap-2.5 sm:gap-3">
           {games.map((game, index) => (
             <Reveal key={game.appid} delay={index * 0.08}>
-              <SpotlightCard>
+              <Link to={`/jeux/${game.appid}`} className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              <SpotlightCard className="transition-colors hover:border-neon-violet/40">
                 <div className="flex items-center gap-3 p-3 sm:gap-4 sm:p-4">
                 <span className={`w-6 shrink-0 text-center text-xl font-black tabular-nums sm:w-8 sm:text-2xl ${RANK_COLORS[index]}`}>{index + 1}</span>
                 <GameImage appid={game.appid} alt={game.name} className="aspect-[460/215] w-20 shrink-0 rounded-md sm:w-36" />
@@ -55,6 +57,7 @@ export function TopGames({ stats }) {
                 </div>
                 </div>
               </SpotlightCard>
+              </Link>
             </Reveal>
           ))}
         </ol>
