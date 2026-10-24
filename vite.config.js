@@ -12,6 +12,8 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
+    // Serveur de dev limité à cette machine (failles connues de Vite 5 côté serveur de dev).
+    host: '127.0.0.1',
     // Le front et l'API partagent la même origine en dev : cookies et SSE passent sans CORS.
     proxy: {
       '/api': api,
