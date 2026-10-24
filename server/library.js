@@ -1,28 +1,35 @@
-import { db, transaction } from './db.js';
+import { sql } from './db.js';
 import { getOwnedGames } from './steam.js';
 
 const CACHE_TTL_MS = 60 * 60 * 1000;
+const INSERT_CHUNK = 1000;
 const refreshing = new Map();
 
 async function refresh(steamid) {
   const games = await getOwnedGames(steamid);
-  transaction(() => {
-    db.prepare('DELETE FROM owned_games WHERE steamid64 = ?').run(steamid);
-    const insert = db.prepare('INSERT INTO owned_games (steamid64, appid, name, playtime_minutes) VALUES (?, ?, ?, ?)');
-    for (const game of games) {
-      insert.run(steamid, game.appid, game.name ?? `App ${game.appid}`, game.playtime_forever ?? 0);
+  const rows = games.map((game) => ({
+    steamid64: steamid,
+    appid: game.appid,
+    name: game.name ?? `App ${game.appid}`,
+    playtime_minutes: game.playtime_forever ?? 0,
+  }));
+
+  await sql.begin(async (tx) => {
+    await tx`DELETE FROM playtrace.owned_games WHERE steamid64 = ${steamid}`;
+    for (let i = 0; i < rows.length; i += INSERT_CHUNK) {
+      await tx`INSERT INTO playtrace.owned_games ${tx(rows.slice(i, i + INSERT_CHUNK))}`;
     }
-    db.prepare(`
-      INSERT INTO owned_games_meta (steamid64, fetched_at) VALUES (?, ?)
+    await tx`
+      INSERT INTO playtrace.owned_games_meta (steamid64, fetched_at) VALUES (${steamid}, now())
       ON CONFLICT (steamid64) DO UPDATE SET fetched_at = excluded.fetched_at
-    `).run(steamid, new Date().toISOString());
+    `;
   });
 }
 
 /** Rafraîchit le cache `GetOwnedGames` s'il a plus d'une heure. Une seule requête Steam à la fois par joueur. */
 export async function ensureLibrary(steamid) {
-  const meta = db.prepare('SELECT fetched_at FROM owned_games_meta WHERE steamid64 = ?').get(steamid);
-  if (meta && Date.now() - Date.parse(meta.fetched_at) < CACHE_TTL_MS) return;
+  const [meta] = await sql`SELECT fetched_at FROM playtrace.owned_games_meta WHERE steamid64 = ${steamid}`;
+  if (meta && Date.now() - new Date(meta.fetched_at).getTime() < CACHE_TTL_MS) return;
 
   if (!refreshing.has(steamid)) {
     refreshing.set(steamid, refresh(steamid).finally(() => refreshing.delete(steamid)));
@@ -35,19 +42,22 @@ export async function ensureLibrary(steamid) {
   }
 }
 
-export function getGameName(steamid, appid) {
-  return db.prepare('SELECT name FROM owned_games WHERE steamid64 = ? AND appid = ?').get(steamid, appid)?.name ?? null;
+export async function getGameName(steamid, appid) {
+  const [game] = await sql`SELECT name FROM playtrace.owned_games WHERE steamid64 = ${steamid} AND appid = ${appid}`;
+  return game?.name ?? null;
 }
 
-export function getLibrarySummary(steamid) {
-  const totals = db.prepare(`
-    SELECT COUNT(*) AS gameCount, COALESCE(SUM(playtime_minutes), 0) AS totalMinutes
-    FROM owned_games WHERE steamid64 = ?
-  `).get(steamid);
-  const topGames = db.prepare(`
-    SELECT appid, name, playtime_minutes AS minutes FROM owned_games
-    WHERE steamid64 = ? AND playtime_minutes > 0 ORDER BY playtime_minutes DESC LIMIT 12
-  `).all(steamid);
-  const meta = db.prepare('SELECT fetched_at FROM owned_games_meta WHERE steamid64 = ?').get(steamid);
+export async function getLibrarySummary(steamid) {
+  const [[totals], topGames, [meta]] = await Promise.all([
+    sql`
+      SELECT COUNT(*)::int AS "gameCount", COALESCE(SUM(playtime_minutes), 0)::int AS "totalMinutes"
+      FROM playtrace.owned_games WHERE steamid64 = ${steamid}
+    `,
+    sql`
+      SELECT appid, name, playtime_minutes AS minutes FROM playtrace.owned_games
+      WHERE steamid64 = ${steamid} AND playtime_minutes > 0 ORDER BY playtime_minutes DESC LIMIT 12
+    `,
+    sql`SELECT fetched_at FROM playtrace.owned_games_meta WHERE steamid64 = ${steamid}`,
+  ]);
   return { ...totals, topGames, fetchedAt: meta?.fetched_at ?? null };
 }
