@@ -7,7 +7,12 @@ CREATE TABLE IF NOT EXISTS playtrace.users (
   avatar     TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   -- Le joueur choisit de rendre son Wrapped visible par lien (désactivé par défaut).
-  public_profile BOOLEAN NOT NULL DEFAULT false
+  public_profile BOOLEAN NOT NULL DEFAULT false,
+  -- RGPD : purge après 12 mois sans connexion, pause du suivi (droit d'opposition).
+  last_login_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  tracking_paused BOOLEAN NOT NULL DEFAULT false,
+  -- Incrémentée pour révoquer toutes les sessions du joueur.
+  session_version INTEGER NOT NULL DEFAULT 1
 );
 
 CREATE TABLE IF NOT EXISTS playtrace.sessions (
@@ -70,3 +75,15 @@ CREATE TABLE IF NOT EXISTS playtrace.achievement_progress (
   fetched_at TIMESTAMPTZ NOT NULL,
   PRIMARY KEY (steamid64, appid)
 );
+
+-- Purge quotidienne (pg_cron, 3 h 17) : comptes inactifs depuis 12 mois, téléchargements périmés, nonces.
+CREATE OR REPLACE FUNCTION playtrace.purge_inactive_accounts() RETURNS void
+LANGUAGE sql SECURITY DEFINER SET search_path = '' AS $$
+  DELETE FROM playtrace.downloads d
+  WHERE NOT EXISTS (SELECT 1 FROM playtrace.users u WHERE u.steamid64 = d.steamid64)
+     OR d.updated_at < now() - interval '1 day';
+  DELETE FROM playtrace.users WHERE last_login_at < now() - interval '12 months';
+  DELETE FROM playtrace.openid_nonces WHERE seen_at < now() - interval '1 hour';
+$$;
+REVOKE ALL ON FUNCTION playtrace.purge_inactive_accounts() FROM PUBLIC;
+-- SELECT cron.schedule('playtrace-purge', '17 3 * * *', $$ SELECT playtrace.purge_inactive_accounts() $$);
