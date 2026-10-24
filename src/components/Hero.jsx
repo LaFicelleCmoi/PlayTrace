@@ -1,4 +1,6 @@
 import { motion } from 'motion/react';
+import { Play, Share2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { AuroraBackground } from '@/components/ui/aurora-background';
 import { CountUp } from '@/components/ui/count-up';
 import { formatDate, formatDuration, formatNumber } from '@/lib/format';
@@ -12,7 +14,7 @@ function Stat({ label, children }) {
   );
 }
 
-export function Hero({ user, stats, trackedSeconds }) {
+export function Hero({ user, stats, trackedSeconds, onPlay, onShare, sharing }) {
   const { totals, library, trackingSince, year } = stats;
 
   return (
@@ -42,6 +44,23 @@ export function Hero({ user, stats, trackedSeconds }) {
           de jeu suivies par PlayTrace
           {trackingSince && <> depuis le {formatDate(trackingSince)}</>}
         </p>
+
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="mt-8 flex flex-col items-center justify-center gap-2.5 sm:flex-row"
+        >
+          <Button size="lg" onClick={onPlay} className="group relative w-full overflow-hidden bg-white px-6 text-black hover:bg-white/90 sm:w-auto">
+            <span aria-hidden className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-neon-violet/30 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+            <Play className="fill-current" />
+            Revivre mon {stats.year}
+          </Button>
+          <Button size="lg" variant="outline" onClick={onShare} disabled={sharing} className="w-full bg-background/40 px-6 backdrop-blur sm:w-auto">
+            <Share2 />
+            {sharing ? 'Création de l’image…' : 'Partager en image'}
+          </Button>
+        </motion.div>
 
         <div className="mx-auto mt-10 grid max-w-3xl grid-cols-2 gap-2.5 sm:mt-12 sm:gap-3 md:grid-cols-4">
           <Stat label="Sessions">{formatNumber(totals.sessions)}</Stat>
