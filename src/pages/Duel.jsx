@@ -13,6 +13,7 @@ import { SectionTitle } from '@/components/SectionTitle';
 import { useApi } from '@/hooks/useApi';
 import { formatDuration, formatNumber } from '@/lib/format';
 import { computeInsights } from '@/lib/insights';
+import { rememberDuel } from '@/lib/recentDuels';
 import { Link } from '@/lib/router';
 import { cn } from '@/lib/utils';
 
@@ -94,7 +95,9 @@ export function Duel({ steamid }) {
   );
 
   useEffect(() => {
-    if (data) document.title = `${data.me.user.pseudo} vs ${data.them.user.pseudo} · PlayTrace`;
+    if (!data) return;
+    document.title = `${data.me.user.pseudo} vs ${data.them.user.pseudo} · PlayTrace`;
+    rememberDuel({ ...data.them.user, score: data.compatibility.score, label: data.compatibility.label });
   }, [data]);
 
   if (loading) {
