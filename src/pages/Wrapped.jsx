@@ -45,7 +45,7 @@ const SECTIONS = [
 ];
 
 /** Page d'accueil : le Wrapped d'une année (l'année en cours par défaut). */
-export function Wrapped({ user, live }) {
+export function Wrapped({ user, live, isPublic, onPublicChange }) {
   const { status, downloads, connection } = live;
   const [year, setYear] = useState(yearFromUrl);
   const { stats, sessions, error, reload } = useStats(year, `${status?.sessionId}-${status?.playing}`);
@@ -65,7 +65,6 @@ export function Wrapped({ user, live }) {
   }
   const [storyOpen, setStoryOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [isPublic, setIsPublic] = useState(Boolean(user.publicProfile));
   const [sharing, setSharing] = useState(false);
 
   async function share() {
@@ -119,7 +118,7 @@ export function Wrapped({ user, live }) {
         onClose={() => setProfileOpen(false)}
         user={user}
         isPublic={isPublic}
-        onChange={setIsPublic}
+        onChange={onPublicChange}
       />
       <LiveBanner status={status} connection={connection} />
       <DownloadsPanel downloads={downloads} />
