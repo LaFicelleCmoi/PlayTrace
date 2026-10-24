@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Gamepad2, LibraryBig, LogOut, Sparkles } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
+import { Footer } from '@/components/Footer';
 import { Login } from '@/components/Login';
 import { useLiveStatus } from '@/hooks/useLiveStatus';
-import { api } from '@/lib/api';
+import { api, logout } from '@/lib/api';
 import { Link, matchRoute, usePathname } from '@/lib/router';
 import { cn } from '@/lib/utils';
 import { GameDetail } from '@/pages/GameDetail';
@@ -17,11 +18,6 @@ const NAV = [
 ];
 
 function Header({ user, page }) {
-  async function logout() {
-    await api.logout().catch(() => {});
-    window.location.assign('/');
-  }
-
   return (
     <header className="fixed inset-x-0 top-0 z-50 border-b border-white/5 bg-background/60 pt-[env(safe-area-inset-top)] backdrop-blur-lg">
       <div className="container flex h-14 items-center justify-between gap-2 sm:gap-3">
@@ -112,9 +108,7 @@ function Shell({ user }) {
           </motion.div>
         </AnimatePresence>
       </main>
-      <footer className="container py-10 pb-[calc(2.5rem+env(safe-area-inset-bottom))] text-center text-xs text-muted-foreground sm:py-12">
-        PlayTrace · l’historique précis commence à l’activation du suivi.
-      </footer>
+      <Footer user={user} live={live} />
     </>
   );
 }
