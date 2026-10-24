@@ -5,6 +5,7 @@ import { BorderBeam } from '@/components/ui/border-beam';
 import { GameImage } from '@/components/GameImage';
 import { useNow } from '@/hooks/useNow';
 import { formatClock, formatDateTime } from '@/lib/format';
+import { Link } from '@/lib/router';
 
 function PulseDot() {
   return (
@@ -37,7 +38,9 @@ export function LiveBanner({ status, connection }) {
             </div>
             <div className="absolute inset-0 bg-gradient-to-r from-card via-card/90 to-card/40" />
             <div className="relative grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-4 p-4 sm:p-6 md:grid-cols-[auto_minmax(0,1fr)_auto]">
-              <GameImage appid={status.appid} alt={status.gameName} className="aspect-[460/215] w-24 rounded-lg sm:w-40 lg:w-48" />
+              <Link to={`/jeux/${status.appid}`} className="rounded-lg">
+                <GameImage appid={status.appid} alt={status.gameName} className="aspect-[460/215] w-24 rounded-lg sm:w-40 lg:w-48" />
+              </Link>
               <div className="min-w-0">
                 <Badge variant="live">
                   <PulseDot />
@@ -49,7 +52,9 @@ export function LiveBanner({ status, connection }) {
                   transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
                   className="line-clamp-2 break-words text-lg font-bold leading-tight sm:text-2xl lg:text-3xl"
                 >
-                  {status.gameName}
+                  <Link to={`/jeux/${status.appid}`} className="hover:underline">
+                    {status.gameName}
+                  </Link>
                 </motion.h2>
                 <p className="mt-1 hidden text-xs text-muted-foreground sm:block">Session lancée {formatDateTime(status.startedAt)}</p>
               </div>
