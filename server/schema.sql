@@ -5,7 +5,9 @@ CREATE TABLE IF NOT EXISTS playtrace.users (
   steamid64  TEXT PRIMARY KEY CHECK (steamid64 ~ '^7656119[0-9]{10}$'),
   pseudo     TEXT NOT NULL,
   avatar     TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  -- Le joueur choisit de rendre son Wrapped visible par lien (désactivé par défaut).
+  public_profile BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE TABLE IF NOT EXISTS playtrace.sessions (
