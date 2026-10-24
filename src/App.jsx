@@ -23,7 +23,7 @@ function Header({ user, page }) {
       <div className="container flex h-14 items-center justify-between gap-2 sm:gap-3">
         <Link to="/" className="flex shrink-0 items-center gap-2 font-bold">
           <img src="/favicon.svg" alt="" className="size-6" />
-          <span className="hidden min-[380px]:inline">
+          <span className="hidden min-[440px]:inline">
             Play<span className="text-gradient">Trace</span>
           </span>
         </Link>
@@ -37,7 +37,7 @@ function Header({ user, page }) {
                 to={to}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
-                  'relative flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors sm:text-sm',
+                  'relative flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-colors sm:text-sm',
                   active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
                 )}
               >
