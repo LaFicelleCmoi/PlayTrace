@@ -2,8 +2,10 @@ import { createHash, timingSafeEqual } from 'node:crypto';
 import { config } from './config.js';
 import {
   clearSessionCookie,
-  clearStateCookie,
+  clearStateCookies,
+  isRecentLogin,
   isValidSteamId,
+  readNext,
   readSession,
   readState,
   sessionCookie,
@@ -21,7 +23,15 @@ import { serveStatic } from './static.js';
 import { getDuel, getPublicProfile } from './social.js';
 import { getYearStats } from './stats.js';
 import { getPlayerSummaries } from './steam.js';
-import { getUser, setPublicProfile, upsertUser } from './users.js';
+import {
+  deleteUser,
+  exportUserData,
+  getUser,
+  revokeSessions,
+  setPublicProfile,
+  setTrackingPaused,
+  upsertUser,
+} from './users.js';
 
 const apiLimiter = createRateLimiter({ windowMs: 60_000, max: 120 });
 const authLimiter = createRateLimiter({ windowMs: 60_000, max: 20 });
@@ -48,10 +58,34 @@ function redirect(res, location, cookies = []) {
 }
 
 async function requireUser(req, res) {
-  const steamid = readSession(req);
-  const user = steamid && (await getUser(steamid));
-  if (!user) sendJson(res, 401, { error: 'Non connecté' });
-  return user || null;
+  const session = readSession(req);
+  const user = session && (await getUser(session.steamid));
+  // Version différente : la session a été révoquée (déconnexion de tous les appareils).
+  if (!user || user.session_version !== session.version) {
+    sendJson(res, 401, { error: 'Non connecté' });
+    return null;
+  }
+  return { ...user, session };
+}
+
+/** Actions qui modifient le compte : même origine obligatoire, en plus du SameSite du cookie. */
+async function requireUserForWrite(req, res) {
+  if (!isSameOrigin(req)) {
+    sendJson(res, 403, { error: 'Origine refusée' });
+    return null;
+  }
+  return requireUser(req, res);
+}
+
+async function readBooleanField(req, res, field) {
+  try {
+    const body = await readJsonBody(req, 1024);
+    if (typeof body?.[field] === 'boolean') return body[field];
+  } catch {
+    // Corps illisible : traité comme invalide ci-dessous.
+  }
+  sendJson(res, 400, { error: 'Données invalides' });
+  return null;
 }
 
 function intParam(url, name, { min, max, fallback }) {
@@ -111,13 +145,57 @@ const routes = {
       avatar: user.avatar,
       createdAt: user.created_at,
       publicProfile: user.public_profile,
+      trackingPaused: user.tracking_paused,
+      lastLoginAt: user.last_login_at,
     });
   },
 
   // Active ou désactive le profil public (lien partageable).
   'POST /api/me/public': async (req, res) => {
-    if (!isSameOrigin(req)) return sendJson(res, 403, { error: 'Origine refusée' });
+    const user = await requireUserForWrite(req, res);
+    if (!user) return;
+    const enabled = await readBooleanField(req, res, 'enabled');
+    if (enabled === null) return;
+    await setPublicProfile(user.steamid64, enabled);
+    sendJson(res, 200, { publicProfile: enabled });
+  },
+
+  // RGPD, droit d'opposition : met le suivi en pause (plus aucun sondage Steam pour ce joueur).
+  'POST /api/me/tracking': async (req, res) => {
+    const user = await requireUserForWrite(req, res);
+    if (!user) return;
+    const paused = await readBooleanField(req, res, 'paused');
+    if (paused === null) return;
+    await setTrackingPaused(user.steamid64, paused);
+    sendJson(res, 200, { trackingPaused: paused });
+  },
+
+  // RGPD, droit d'accès et à la portabilité : export JSON de toutes les données.
+  'GET /api/me/export': async (req, res) => {
     const user = await requireUser(req, res);
+    if (!user) return;
+    const payload = JSON.stringify(await exportUserData(user.steamid64), null, 2);
+    res.writeHead(200, {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Content-Disposition': `attachment; filename="playtrace-donnees-${user.steamid64}.json"`,
+      'Content-Length': Buffer.byteLength(payload),
+      'Cache-Control': 'no-store',
+    });
+    res.end(payload);
+  },
+
+  // Déconnecte tous les appareils (cookie volé, ordinateur partagé…).
+  'POST /api/me/logout-all': async (req, res) => {
+    const user = await requireUserForWrite(req, res);
+    if (!user) return;
+    await revokeSessions(user.steamid64);
+    res.setHeader('Set-Cookie', clearSessionCookie());
+    sendJson(res, 200, { ok: true });
+  },
+
+  // RGPD, droit à l'effacement. Exige une connexion Steam récente et une confirmation écrite.
+  'POST /api/me/delete': async (req, res) => {
+    const user = await requireUserForWrite(req, res);
     if (!user) return;
     let body;
     try {
@@ -125,9 +203,13 @@ const routes = {
     } catch {
       return sendJson(res, 400, { error: 'JSON invalide' });
     }
-    if (typeof body?.enabled !== 'boolean') return sendJson(res, 400, { error: 'Données invalides' });
-    await setPublicProfile(user.steamid64, body.enabled);
-    sendJson(res, 200, { publicProfile: body.enabled });
+    if (body?.confirm !== 'SUPPRIMER') return sendJson(res, 400, { error: 'Écris SUPPRIMER pour confirmer' });
+    if (!isRecentLogin(user.session)) {
+      return sendJson(res, 403, { error: 'Reconnecte-toi avec Steam pour confirmer la suppression', reauth: true });
+    }
+    await deleteUser(user.steamid64);
+    res.setHeader('Set-Cookie', clearSessionCookie());
+    sendJson(res, 200, { ok: true });
   },
 
   'GET /api/stats': async (req, res, url) => {
@@ -196,20 +278,20 @@ const routes = {
     sendJson(res, 200, { ok: true });
   },
 
-  'GET /auth/steam': (req, res) => {
-    const { location, cookie } = startLogin();
-    redirect(res, location, [cookie]);
+  'GET /auth/steam': (req, res, url) => {
+    const { location, cookies } = startLogin(url.searchParams.get('next'));
+    redirect(res, location, cookies);
   },
 
   'GET /auth/steam/return': async (req, res, url) => {
     const steamid = await verifyLogin(url.searchParams, readState(req));
-    if (!steamid) return redirect(res, '/?login=failed', [clearStateCookie()]);
+    if (!steamid) return redirect(res, '/?login=failed', clearStateCookies());
 
     const [profile] = await getPlayerSummaries([steamid]).catch(() => []);
-    await upsertUser(steamid, profile);
+    const account = await upsertUser(steamid, profile);
     // Premier sondage immédiat pour que le bandeau live soit juste dès l'arrivée sur le dashboard.
-    await pollOnce([steamid]).catch((error) => console.error('[poller]', error.message));
-    redirect(res, '/', [clearStateCookie(), sessionCookie(steamid)]);
+    if (!account.tracking_paused) await pollOnce([steamid]).catch((error) => console.error('[poller]', error.message));
+    redirect(res, readNext(req), [...clearStateCookies(), sessionCookie(steamid, account.session_version)]);
   },
 
   'POST /auth/logout': (req, res) => {
