@@ -4,10 +4,15 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { isValidSteamId } from './auth.js';
 import { config } from './config.js';
+import { sql } from './db.js';
 import { parseVdf } from './vdf.js';
 
-// L'API Web Steam ne dit rien des téléchargements : on lit les fichiers du client Steam installé sur cette machine.
+// L'API Web Steam ne dit rien des téléchargements : on lit les fichiers du client Steam installé sur cette machine
+// (serveur local ou agent), puis on les range en base pour que le site, même sur Vercel, puisse les afficher.
 const SCAN_INTERVAL_MS = 3000;
+// Même sans changement, l'état est renvoyé régulièrement : sans nouvelles, le site considère le client Steam éteint.
+const HEARTBEAT_MS = 15_000;
+const STALE_AFTER_MS = 45_000;
 // Au-delà, sans nouvel octet écrit dans le manifeste, on n'affiche plus de vitesse.
 const SPEED_STALE_MS = 30_000;
 
@@ -154,12 +159,24 @@ async function scan(steamRoot) {
   return { owner, downloads };
 }
 
-/** Téléchargements visibles par `steamid` (vide si ce n'est pas le compte du client Steam local). */
-export function getDownloads(steamid) {
-  return steamid === current.owner ? current.downloads : [];
+export async function saveDownloads(steamid, items) {
+  await sql`
+    INSERT INTO playtrace.downloads (steamid64, items, updated_at) VALUES (${steamid}, ${sql.json(items)}, now())
+    ON CONFLICT (steamid64) DO UPDATE SET items = excluded.items, updated_at = excluded.updated_at
+  `;
 }
 
-/** Relit les manifestes toutes les 3 s et appelle `onChange(next, previous)` quand quelque chose bouge. */
+/** Téléchargements de `steamid`, ou liste vide si son client Steam ne s'est pas manifesté récemment. */
+export async function getDownloads(steamid) {
+  const [row] = await sql`SELECT items, updated_at FROM playtrace.downloads WHERE steamid64 = ${steamid}`;
+  if (!row || Date.now() - new Date(row.updated_at).getTime() > STALE_AFTER_MS) return [];
+  return row.items;
+}
+
+/**
+ * Relit les manifestes toutes les 3 s et appelle `onChange(next, previous)` quand quelque chose bouge,
+ * ou toutes les 15 s au minimum pour signaler que le client Steam est toujours là.
+ */
 export function startDownloadWatcher(onChange) {
   const steamRoot = steamCandidates().find((path) => existsSync(path));
   if (!steamRoot) {
@@ -170,17 +187,19 @@ export function startDownloadWatcher(onChange) {
 
   let running = false;
   let lastJson = JSON.stringify(current);
+  let lastEmit = 0;
   const tick = async () => {
     if (running) return;
     running = true;
     try {
       const next = await scan(steamRoot);
       const json = JSON.stringify(next);
-      if (json !== lastJson) {
+      if (json !== lastJson || Date.now() - lastEmit >= HEARTBEAT_MS) {
         const previous = current;
         current = next;
         lastJson = json;
-        onChange(next, previous);
+        lastEmit = Date.now();
+        await onChange(next, previous);
       }
     } catch (error) {
       console.error('[downloads]', error.message);
