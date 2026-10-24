@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360" role="img" aria-label="PlayTrace — ton Steam Wrapped, en temps réel">
+  <defs>
+    <linearGradient id="neon" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#22d3ee"><animate attributeName="stop-color" values="#22d3ee;#a78bfa;#f472b6;#22d3ee" dur="8s" repeatCount="indefinite"/></stop>
+      <stop offset="50%" stop-color="#a78bfa"><animate attributeName="stop-color" values="#a78bfa;#f472b6;#22d3ee;#a78bfa" dur="8s" repeatCount="indefinite"/></stop>
+      <stop offset="100%" stop-color="#f472b6"><animate attributeName="stop-color" values="#f472b6;#22d3ee;#a78bfa;#f472b6" dur="8s" repeatCount="indefinite"/></stop>
+    </linearGradient>
+    <radialGradient id="glowA" cx="0.15" cy="0.1" r="0.6"><stop offset="0" stop-color="#7c3aed" stop-opacity="0.55"/><stop offset="1" stop-color="#7c3aed" stop-opacity="0"/></radialGradient>
+    <radialGradient id="glowB" cx="0.9" cy="0.9" r="0.6"><stop offset="0" stop-color="#db2777" stop-opacity="0.4"/><stop offset="1" stop-color="#db2777" stop-opacity="0"/></radialGradient>
+    <radialGradient id="glowC" cx="0.85" cy="0.1" r="0.45"><stop offset="0" stop-color="#0891b2" stop-opacity="0.35"/><stop offset="1" stop-color="#0891b2" stop-opacity="0"/></radialGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="#ffffff" stroke-opacity="0.05"/></pattern>
+    <filter id="soft" x="-60%" y="-60%" width="220%" height="220%" filterUnits="objectBoundingBox"><feGaussianBlur stdDeviation="1.4"/></filter>
+  </defs>
+
+  <rect width="1200" height="360" rx="28" fill="#07070c"/>
+  <rect width="1200" height="360" rx="28" fill="url(#grid)"/>
+  <rect width="1200" height="360" rx="28" fill="url(#glowA)"/>
+  <rect width="1200" height="360" rx="28" fill="url(#glowB)"/>
+  <rect width="1200" height="360" rx="28" fill="url(#glowC)"/>
+
+  <!-- Courbe du logo, qui se dessine en boucle. -->
+  <g transform="translate(120 92) scale(5.6)">
+    <path d="M7 21 L12 13 L17 18 L25 9" fill="none" stroke="url(#neon)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" filter="url(#soft)" opacity="0.7"/>
+    <path d="M7 21 L12 13 L17 18 L25 9" fill="none" stroke="url(#neon)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="40" stroke-dashoffset="40">
+      <animate attributeName="stroke-dashoffset" values="40;0;0;40" keyTimes="0;0.35;0.85;1" dur="6s" repeatCount="indefinite"/>
+    </path>
+    <circle cx="25" cy="9" r="2.5" fill="#f472b6">
+      <animate attributeName="r" values="2.5;3.4;2.5" dur="1.6s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+
+  <text x="340" y="178" font-family="Inter, 'Segoe UI', system-ui, sans-serif" font-size="96" font-weight="900" fill="#f4f4f5" letter-spacing="-3">Play<tspan fill="url(#neon)">Trace</tspan></text>
+  <text x="344" y="232" font-family="Inter, 'Segoe UI', system-ui, sans-serif" font-size="30" font-weight="500" fill="#a1a1aa">Ton Steam Wrapped, mais en <tspan fill="#f4f4f5" font-weight="700">temps réel</tspan>.</text>
+
+  <!-- Pastille « en direct ». -->
+  <g transform="translate(344 262)">
+    <rect width="214" height="40" rx="20" fill="#f43f5e" fill-opacity="0.12" stroke="#f43f5e" stroke-opacity="0.45"/>
+    <circle cx="24" cy="20" r="6" fill="#f43f5e"><animate attributeName="opacity" values="1;0.3;1" dur="1.4s" repeatCount="indefinite"/></circle>
+    <text x="40" y="26" font-family="Inter, 'Segoe UI', system-ui, sans-serif" font-size="17" font-weight="700" fill="#fda4af" letter-spacing="2">SUIVI EN DIRECT</text>
+  </g>
+</svg>
