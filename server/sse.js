@@ -36,6 +36,20 @@ export function subscribe(req, res, steamid, initialEvents) {
   });
 }
 
+/**
+ * Variante sans connexion persistante (Vercel) : envoie l'état puis ferme.
+ * EventSource se reconnecte tout seul après `retry` ms, ce qui revient à relire l'état toutes les 15 s.
+ */
+export function sendOnce(res, events) {
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream; charset=utf-8',
+    'Cache-Control': 'no-cache, no-transform',
+  });
+  res.write('retry: 15000\n\n');
+  for (const [event, data] of Object.entries(events)) send(res, event, data);
+  res.end();
+}
+
 export function publish(steamid, event, data) {
   for (const res of clients.get(steamid) ?? []) send(res, event, data);
 }
