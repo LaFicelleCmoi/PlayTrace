@@ -1,11 +1,52 @@
 import { motion } from 'motion/react';
-import { ArrowUp, ArrowUpRight, Gamepad2, LibraryBig, LogOut, Radio, ShieldCheck, Sparkles, UserRound } from 'lucide-react';
+import { ArrowUp, ArrowUpRight, Gamepad2, LibraryBig, LogOut, Orbit, Radio, ShieldCheck, Sparkles, UserRound } from 'lucide-react';
+import { siNodedotjs, siReact, siSteam, siSupabase, siTailwindcss, siVercel, siVite } from 'simple-icons';
 import { TextHoverEffect } from '@/components/ui/text-hover-effect';
 import { logout } from '@/lib/api';
 import { Link } from '@/lib/router';
 import { cn } from '@/lib/utils';
 
-const STACK = ['React', 'Motion', 'Tailwind', 'Node.js', 'Supabase', 'Vercel', 'API Steam'];
+// Logos de simple-icons (CC0). Motion n'y figure pas : icône neutre plutôt qu'un faux logo.
+const STACK = [
+  { name: 'React', icon: siReact },
+  { name: 'Vite', icon: siVite },
+  { name: 'Tailwind', icon: siTailwindcss },
+  { name: 'Motion', lucide: Orbit, color: '#f4f4f5' },
+  { name: 'Node.js', icon: siNodedotjs },
+  { name: 'Supabase', icon: siSupabase },
+  { name: 'Vercel', icon: siVercel },
+  { name: 'API Steam', icon: siSteam },
+];
+
+/** Couleur de marque, sauf les logos noirs (Vercel, Steam) qui disparaîtraient sur le fond sombre. */
+function brandColor(tech) {
+  if (tech.color) return tech.color;
+  return tech.icon.hex === '000000' ? '#f4f4f5' : `#${tech.icon.hex}`;
+}
+
+function TechBadge({ tech, index }) {
+  const color = brandColor(tech);
+  const Lucide = tech.lucide;
+  return (
+    <motion.li
+      initial={{ opacity: 0, scale: 0.8 }}
+      whileInView={{ opacity: 1, scale: 1 }}
+      viewport={{ once: true }}
+      transition={{ delay: index * 0.05 }}
+      style={{ '--brand': color }}
+      className="group flex items-center gap-1.5 rounded-lg border bg-card/70 px-2.5 py-1.5 text-xs text-muted-foreground transition duration-300 hover:-translate-y-0.5 hover:border-[color:var(--brand)] hover:text-foreground hover:shadow-[0_0_18px_-6px_var(--brand)]"
+    >
+      {Lucide ? (
+        <Lucide className="size-3.5 shrink-0 text-[color:var(--brand)]" aria-hidden />
+      ) : (
+        <svg viewBox="0 0 24 24" className="size-3.5 shrink-0" fill={color} aria-hidden>
+          <path d={tech.icon.path} />
+        </svg>
+      )}
+      {tech.name}
+    </motion.li>
+  );
+}
 const linkClass = 'group inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground';
 
 function FooterLink({ to, href, icon: Icon, children }) {
@@ -140,18 +181,9 @@ export function Footer({ user, live }) {
 
             <div className="col-span-2 sm:col-span-1">
               <p className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-foreground/70">Sous le capot</p>
-              <ul className="flex flex-wrap gap-1.5">
+              <ul className="flex flex-wrap gap-2">
                 {STACK.map((tech, index) => (
-                  <motion.li
-                    key={tech}
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    whileInView={{ opacity: 1, scale: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: index * 0.05 }}
-                    className="rounded-md border bg-card/70 px-2 py-1 text-xs text-muted-foreground transition-colors hover:border-neon-cyan/50 hover:text-foreground"
-                  >
-                    {tech}
-                  </motion.li>
+                  <TechBadge key={tech.name} tech={tech} index={index} />
                 ))}
               </ul>
             </div>
