@@ -11,10 +11,13 @@ import { useSessionToasts } from '@/hooks/useSessionToasts';
 import { api, logout } from '@/lib/api';
 import { Link, matchRoute, usePathname } from '@/lib/router';
 import { cn } from '@/lib/utils';
+import { Account } from '@/pages/Account';
 import { Challenges } from '@/pages/Challenges';
 import { Duel } from '@/pages/Duel';
 import { GameDetail } from '@/pages/GameDetail';
+import { Legal } from '@/pages/Legal';
 import { Library } from '@/pages/Library';
+import { Privacy } from '@/pages/Privacy';
 import { PublicProfile } from '@/pages/PublicProfile';
 import { Wrapped } from '@/pages/Wrapped';
 
@@ -74,8 +77,10 @@ function Header({ user, page, onSearch }) {
             <span className="hidden lg:inline">Rechercher</span>
             <kbd className="hidden rounded border px-1.5 text-[10px] lg:inline">Ctrl K</kbd>
           </button>
-          {user.avatar && <img src={user.avatar} alt="" className="hidden size-8 shrink-0 rounded-full border min-[480px]:block" referrerPolicy="no-referrer" />}
-          <span className="hidden max-w-[10rem] truncate text-sm lg:inline">{user.pseudo}</span>
+          <Link to="/compte" title="Mon compte et mes données" className="flex min-w-0 items-center gap-2 rounded-full transition-opacity hover:opacity-80">
+            {user.avatar && <img src={user.avatar} alt="" className="hidden size-8 shrink-0 rounded-full border min-[480px]:block" referrerPolicy="no-referrer" />}
+            <span className="hidden max-w-[10rem] truncate text-sm lg:inline">{user.pseudo}</span>
+          </Link>
           <Button variant="ghost" size="icon" onClick={logout} aria-label="Se déconnecter">
             <LogOut />
           </Button>
@@ -95,7 +100,13 @@ function NotFound() {
   );
 }
 
-const TITLES = { wrapped: 'PlayTrace', library: 'Mes jeux · PlayTrace', challenges: 'Défis · PlayTrace', notfound: 'Introuvable · PlayTrace' };
+const TITLES = {
+  wrapped: 'PlayTrace',
+  library: 'Mes jeux · PlayTrace',
+  challenges: 'Défis · PlayTrace',
+  account: 'Mon compte · PlayTrace',
+  notfound: 'Introuvable · PlayTrace',
+};
 
 function Shell({ user }) {
   const pathname = usePathname();
@@ -104,6 +115,7 @@ function Shell({ user }) {
   const live = useLiveStatus();
   useSessionToasts(live.status);
   const [isPublic, setIsPublic] = useState(Boolean(user.publicProfile));
+  const [trackingPaused, setTrackingPaused] = useState(Boolean(user.trackingPaused));
   const [searchOpen, setSearchOpen] = useState(false);
   useCommandPaletteShortcut(setSearchOpen);
 
@@ -124,7 +136,20 @@ function Shell({ user }) {
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.25, ease: 'easeOut' }}
           >
-            {route.page === 'wrapped' && <Wrapped user={user} live={live} isPublic={isPublic} onPublicChange={setIsPublic} />}
+            {route.page === 'wrapped' && (
+              <Wrapped user={user} live={live} isPublic={isPublic} onPublicChange={setIsPublic} trackingPaused={trackingPaused} />
+            )}
+            {route.page === 'account' && (
+              <Account
+                user={user}
+                isPublic={isPublic}
+                onPublicChange={setIsPublic}
+                trackingPaused={trackingPaused}
+                onTrackingChange={setTrackingPaused}
+              />
+            )}
+            {route.page === 'privacy' && <Privacy />}
+            {route.page === 'legal' && <Legal />}
             {route.page === 'challenges' && <Challenges user={user} isPublic={isPublic} onPublicChange={setIsPublic} />}
             {route.page === 'library' && <Library live={live} />}
             {route.page === 'game' && <GameDetail appid={route.appid} live={live} />}
@@ -140,8 +165,8 @@ function Shell({ user }) {
   );
 }
 
-/** Profil public consulté sans être connecté : en-tête minimal et invitation à créer son Wrapped. */
-function PublicLayout({ steamid }) {
+/** Pages accessibles sans être connecté (profil public, pages légales) : en-tête minimal. */
+function PublicLayout({ children }) {
   return (
     <>
       <header className="fixed inset-x-0 top-0 z-50 border-b border-white/5 bg-background/60 pt-[env(safe-area-inset-top)] backdrop-blur-lg">
@@ -156,7 +181,7 @@ function PublicLayout({ steamid }) {
         </div>
       </header>
       <main className="min-h-dvh pt-[calc(3.5rem+env(safe-area-inset-top))]">
-        <PublicProfile steamid={steamid} viewer={null} />
+        {children}
       </main>
       <Footer />
     </>
@@ -172,6 +197,11 @@ export default function App() {
   }, []);
 
   if (user === undefined) return <div className="min-h-dvh" />;
-  if (!user) return route.page === 'public' ? <PublicLayout steamid={route.steamid} /> : <Login />;
+  if (!user) {
+    if (route.page === 'public') return <PublicLayout><PublicProfile steamid={route.steamid} viewer={null} /></PublicLayout>;
+    if (route.page === 'privacy') return <PublicLayout><Privacy /></PublicLayout>;
+    if (route.page === 'legal') return <PublicLayout><Legal /></PublicLayout>;
+    return <Login />;
+  }
   return <Shell user={user} />;
 }
