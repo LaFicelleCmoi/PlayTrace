@@ -21,12 +21,14 @@ CREATE TABLE IF NOT EXISTS playtrace.sessions (
 );
 CREATE INDEX IF NOT EXISTS sessions_user_start_idx ON playtrace.sessions (steamid64, started_at);
 CREATE UNIQUE INDEX IF NOT EXISTS sessions_open_idx ON playtrace.sessions (steamid64) WHERE ended_at IS NULL;
+CREATE INDEX IF NOT EXISTS sessions_user_app_idx ON playtrace.sessions (steamid64, appid);
 
 CREATE TABLE IF NOT EXISTS playtrace.owned_games (
   steamid64        TEXT NOT NULL REFERENCES playtrace.users (steamid64) ON DELETE CASCADE,
   appid            INTEGER NOT NULL,
   name             TEXT NOT NULL,
   playtime_minutes INTEGER NOT NULL DEFAULT 0,
+  last_played      TIMESTAMPTZ,
   PRIMARY KEY (steamid64, appid)
 );
 
@@ -46,4 +48,13 @@ CREATE TABLE IF NOT EXISTS playtrace.downloads (
 CREATE TABLE IF NOT EXISTS playtrace.openid_nonces (
   nonce   TEXT PRIMARY KEY,
   seen_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Données Steam communes à tous les joueurs (fiche Store, liste des succès, rareté mondiale).
+CREATE TABLE IF NOT EXISTS playtrace.game_cache (
+  appid      INTEGER NOT NULL,
+  kind       TEXT NOT NULL CHECK (kind IN ('store', 'schema', 'rarity', 'assets')),
+  data       JSONB,
+  fetched_at TIMESTAMPTZ NOT NULL,
+  PRIMARY KEY (appid, kind)
 );
