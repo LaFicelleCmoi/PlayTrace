@@ -12,7 +12,12 @@ const NONCE_MAX_AGE_MS = 5 * 60 * 1000;
 
 const SESSION_COOKIE = 'pt_session';
 const STATE_COOKIE = 'pt_oidc_state';
-const SESSION_MAX_AGE_S = 30 * 24 * 60 * 60;
+const NEXT_COOKIE = 'pt_oidc_next';
+// Sessions courtes : un cookie volé (malware « infostealer ») ne sert pas indéfiniment.
+const SESSION_MAX_AGE_S = 14 * 24 * 60 * 60;
+// Actions sensibles (suppression du compte) : connexion Steam de moins de 15 minutes exigée.
+const RECENT_AUTH_S = 15 * 60;
+const NEXT_RE = /^\/(?!\/)[\w\-/]{0,80}$/;
 
 const returnUrl = `${config.baseUrl}/auth/steam/return`;
 const secureCookies = config.baseUrl.startsWith('https://');
@@ -48,10 +53,13 @@ function safeEqual(a, b) {
   return bufA.length === bufB.length && timingSafeEqual(bufA, bufB);
 }
 
-/** Cookie de session signé (HMAC) : `steamid.expiration.signature`, rien n'est stocké côté serveur. */
-export function sessionCookie(steamid) {
-  const expires = Math.floor(Date.now() / 1000) + SESSION_MAX_AGE_S;
-  const payload = `${steamid}.${expires}`;
+/**
+ * Cookie de session signé (HMAC) : `steamid.version.émission.signature`.
+ * La version vient de la base : l'incrémenter révoque d'un coup toutes les sessions du joueur.
+ */
+export function sessionCookie(steamid, version) {
+  const issuedAt = Math.floor(Date.now() / 1000);
+  const payload = `${steamid}.${version}.${issuedAt}`;
   return serializeCookie(SESSION_COOKIE, `${payload}.${sign(payload)}`, { maxAge: SESSION_MAX_AGE_S });
 }
 
@@ -59,19 +67,25 @@ export function clearSessionCookie() {
   return serializeCookie(SESSION_COOKIE, '', { maxAge: 0 });
 }
 
-/** SteamID64 de la requête si le cookie est valide et non expiré, sinon `null`. */
+/** `{ steamid, version, issuedAt }` si le cookie est valide et non expiré, sinon `null`. */
 export function readSession(req) {
-  const [steamid, expires, signature] = (readCookie(req, SESSION_COOKIE) ?? '').split('.');
-  if (!isValidSteamId(steamid) || !/^\d+$/.test(expires ?? '') || !signature) return null;
-  if (!safeEqual(signature, sign(`${steamid}.${expires}`))) return null;
-  if (Number(expires) * 1000 < Date.now()) return null;
-  return steamid;
+  const [steamid, version, issuedAt, signature] = (readCookie(req, SESSION_COOKIE) ?? '').split('.');
+  if (!isValidSteamId(steamid) || !/^\d+$/.test(version ?? '') || !/^\d+$/.test(issuedAt ?? '') || !signature) return null;
+  if (!safeEqual(signature, sign(`${steamid}.${version}.${issuedAt}`))) return null;
+  const age = Date.now() / 1000 - Number(issuedAt);
+  if (age < -60 || age > SESSION_MAX_AGE_S) return null;
+  return { steamid, version: Number(version), issuedAt: Number(issuedAt) };
+}
+
+/** La connexion Steam date-t-elle de moins de 15 minutes ? */
+export function isRecentLogin(session) {
+  return Date.now() / 1000 - session.issuedAt < RECENT_AUTH_S;
 }
 
 // --- Steam OpenID 2.0 --------------------------------------------------------
 
-/** URL de connexion Steam + cookie anti-CSRF qui l'accompagne. */
-export function startLogin() {
+/** URL de connexion Steam + cookies anti-CSRF et de retour (`next`, chemin interne uniquement). */
+export function startLogin(next) {
   const state = randomBytes(16).toString('base64url');
   const params = new URLSearchParams({
     'openid.ns': OPENID_NS,
@@ -83,12 +97,21 @@ export function startLogin() {
   });
   return {
     location: `${OPENID_ENDPOINT}?${params}`,
-    cookie: serializeCookie(STATE_COOKIE, state, { maxAge: 600, path: '/auth' }),
+    cookies: [
+      serializeCookie(STATE_COOKIE, state, { maxAge: 600, path: '/auth' }),
+      serializeCookie(NEXT_COOKIE, next && NEXT_RE.test(next) ? encodeURIComponent(next) : '', { maxAge: 600, path: '/auth' }),
+    ],
   };
 }
 
-export function clearStateCookie() {
-  return serializeCookie(STATE_COOKIE, '', { maxAge: 0, path: '/auth' });
+export function clearStateCookies() {
+  return [serializeCookie(STATE_COOKIE, '', { maxAge: 0, path: '/auth' }), serializeCookie(NEXT_COOKIE, '', { maxAge: 0, path: '/auth' })];
+}
+
+/** Page où revenir après la connexion (jamais une URL externe : pas de redirection ouverte). */
+export function readNext(req) {
+  const next = decodeURIComponent(readCookie(req, NEXT_COOKIE) ?? '');
+  return NEXT_RE.test(next) ? next : '/';
 }
 
 export function readState(req) {
