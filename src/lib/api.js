@@ -5,7 +5,7 @@ export class ApiError extends Error {
   }
 }
 
-async function request(path, options) {
+export async function request(path, options) {
   const res = await fetch(path, { credentials: 'same-origin', ...options });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) throw new ApiError(res.status, body.error ?? `Erreur ${res.status}`);
@@ -16,5 +16,7 @@ export const api = {
   me: () => request('/api/me'),
   stats: (year) => request(`/api/stats?year=${year}&tz=${new Date().getTimezoneOffset()}`),
   sessions: (limit = 20) => request(`/api/sessions?limit=${limit}`),
+  games: () => request('/api/games'),
+  game: (appid) => request(`/api/games/${appid}`),
   logout: () => request('/auth/logout', { method: 'POST' }),
 };
