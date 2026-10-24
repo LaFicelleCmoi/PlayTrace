@@ -16,6 +16,8 @@ async function refresh(steamid) {
   }));
 
   await sql.begin(async (tx) => {
+    // Deux fonctions Vercel peuvent rafraîchir le même joueur en même temps : on les fait passer l'une après l'autre.
+    await tx`SELECT pg_advisory_xact_lock(hashtext(${`owned_games:${steamid}`}))`;
     await tx`DELETE FROM playtrace.owned_games WHERE steamid64 = ${steamid}`;
     for (let i = 0; i < rows.length; i += INSERT_CHUNK) {
       await tx`INSERT INTO playtrace.owned_games ${tx(rows.slice(i, i + INSERT_CHUNK))}`;
