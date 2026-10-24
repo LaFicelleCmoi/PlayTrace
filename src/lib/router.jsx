@@ -27,6 +27,7 @@ export function usePathname() {
 export function matchRoute(pathname) {
   if (pathname === '/') return { page: 'wrapped' };
   if (/^\/jeux\/?$/.test(pathname)) return { page: 'library' };
+  if (/^\/defis\/?$/.test(pathname)) return { page: 'challenges' };
   const game = /^\/jeux\/(\d{1,10})\/?$/.exec(pathname);
   if (game) return { page: 'game', appid: Number(game[1]) };
   const player = /^\/joueur\/(7656119\d{10})\/?$/.exec(pathname);
