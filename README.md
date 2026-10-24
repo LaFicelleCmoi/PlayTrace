@@ -1,305 +1,341 @@
 <div align="center">
 
-# 🎮 PlayTrace
+<img src="docs/banner.svg" alt="PlayTrace : ton Steam Wrapped, mais en temps réel" width="100%" />
 
-### Ton Steam Wrapped, mais en **temps réel**.
+<br />
 
-*Real-time Steam Wrapped: PlayTrace tracks your gaming sessions live and displays your stats as you play.*
+**PlayTrace détecte ce que tu joues sur Steam, enregistre chaque session et transforme ton année de jeu en un Wrapped animé, qui se met à jour pendant que tu joues.**
 
-![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black)
-![Vite](https://img.shields.io/badge/Vite-5-646CFF?style=for-the-badge&logo=vite&logoColor=white)
-![Tailwind](https://img.shields.io/badge/Tailwind-CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
-![Node.js](https://img.shields.io/badge/Node.js-sans%20framework-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
-![Supabase](https://img.shields.io/badge/Supabase-Postgres-3FCF8E?style=for-the-badge&logo=supabase&logoColor=white)
-![Vercel](https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)
-![Steam](https://img.shields.io/badge/Steam-Web%20API-171A21?style=for-the-badge&logo=steam&logoColor=white)
+<br />
+
+[![Démo en ligne](https://img.shields.io/badge/▶_Démo_en_ligne-play--trace--nine.vercel.app-a78bfa?style=for-the-badge&labelColor=07070c)](https://play-trace-nine.vercel.app)
+
+![React](https://img.shields.io/badge/React_18-61DAFB?style=flat-square&logo=react&logoColor=black)
+![Vite](https://img.shields.io/badge/Vite_5-9135FF?style=flat-square&logo=vite&logoColor=white)
+![Tailwind](https://img.shields.io/badge/Tailwind-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white)
+![Motion](https://img.shields.io/badge/Motion-111111?style=flat-square&logo=framer&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js_sans_framework-5FA04E?style=flat-square&logo=nodedotjs&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase_Postgres-3FCF8E?style=flat-square&logo=supabase&logoColor=white)
+![Vercel](https://img.shields.io/badge/Vercel-000000?style=flat-square&logo=vercel&logoColor=white)
+![Steam](https://img.shields.io/badge/API_Web_Steam-171A21?style=flat-square&logo=steam&logoColor=white)
+![PWA](https://img.shields.io/badge/PWA-installable-5A0FC8?style=flat-square&logo=pwa&logoColor=white)
+
+[Fonctionnalités](#-fonctionnalités) · [Captures](#-en-images) · [Architecture](#%EF%B8%8F-architecture) · [Installation](#-installation) · [Déploiement](#%EF%B8%8F-déploiement) · [Vie privée](#-sécurité--vie-privée)
 
 </div>
 
----
+<br />
 
-## ✨ Le concept
+<img src="docs/screenshots/wrapped.png" alt="Le Wrapped de PlayTrace : compteur d'heures en direct, partie en cours, téléchargements" width="100%" />
 
-PlayTrace détecte le jeu en cours sur ton compte Steam, enregistre chaque session et affiche tes statistiques **en direct**, dans un style « Wrapped » animé.
-
-> L'API Steam ne fournit **aucun historique de sessions**. PlayTrace enregistre donc lui-même ton activité : l'historique précis commence à l'activation du suivi.
+<sub>Toutes les captures utilisent des joueurs de démonstration fictifs.</sub>
 
 ---
 
-## 🧱 Stack technique
+## 💡 Le concept
 
-| Couche | Technologie |
-|---|---|
-| Front | **React** + Vite |
-| Style | Tailwind CSS + **shadcn/ui** |
-| Animations | **Motion** (motion.dev) |
-| Composants animés | React Bits, Aceternity UI, Magic UI, Kokonut UI, Lightswind, Cult UI |
-| Back | Node.js **sans framework** (module `http`) |
-| Base de données | PostgreSQL (**Supabase**) |
-| Hébergement | **Vercel** (front + fonction API) |
-| Sondage | `pg_cron` Supabase, chaque minute |
-| Temps réel | SSE (Server-Sent Events) |
-| Données | API Web Steam |
+Steam te donne un total d'heures par jeu, mais **aucun historique** : impossible de savoir quand tu as joué, combien de temps a duré ta dernière session, ou à quoi ressemble ton année.
+
+PlayTrace comble ce vide : il sonde Steam **chaque minute**, enregistre chaque session (jeu, début, fin, durée) et en tire un **Wrapped vivant**, façon Spotify, où le compteur d'heures grimpe pendant que tu joues.
+
+> Le suivi tourne côté serveur : **ferme l'onglet, éteins ton PC**, tes parties sont quand même enregistrées.
 
 ---
 
-## 🎨 Bibliothèques UI
+## ✨ Fonctionnalités
 
-| Bibliothèque | Site | Utilisation prévue |
-|---|---|---|
-| **shadcn/ui** | [ui.shadcn.com](https://ui.shadcn.com/) | Base du design system : cartes, onglets, badges, skeletons, graphiques, toasts |
-| **Motion** | [motion.dev](https://motion.dev) | Animations au scroll (`useScroll`, `useInView`), transitions d'apparition, `AnimatePresence` |
-| **React Bits** | [reactbits.dev](https://reactbits.dev) | Compteurs animés, textes qui apparaissent, fonds animés, cartes interactives |
-| **Aceternity UI** | [aceternity.com](https://www.aceternity.com) | Effets de spotlight, bento grid, révélation au scroll, cartes 3D |
-| **Magic UI** | [magicui.design](https://magicui.design) | Bordures lumineuses, marquee des jeux, compteurs, effets de particules |
-| **Kokonut UI** | [kokonutui.com](https://kokonutui.com) | Composants modernes complémentaires (boutons, cartes, inputs) |
-| **Lightswind** | [lightswind.com](https://lightswind.com) | Composants et effets complémentaires |
-| **Cult UI** | [cult-ui.com](https://cult-ui.com) | Composants d'interface originaux (dock, éléments extensibles) |
-
-> Les composants se copient dans le projet (`src/components/ui/`) ou s'installent via la CLI de chaque bibliothèque. Vérifie sur chaque site les noms exacts et les commandes d'installation, ils évoluent régulièrement.
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>🔴 Le Wrapped en direct</h3>
+      Compteur d'heures qui monte en temps réel, bandeau <b>« En train de jouer à… »</b> avec chrono, top 5, jeu de l'année, marquee des jaquettes, sélecteur d'année.
+    </td>
+    <td width="50%" valign="top">
+      <h3>🎬 Le mode Story</h3>
+      Ton année racontée en slides plein écran, façon stories : heures, jeu de l'année, top 5, créneau favori, records, personnalité. Tap, appui long, flèches du clavier.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <h3>🧠 Ton profil de joueur</h3>
+      Une personnalité calculée (<i>Créature de la nuit</i>, <i>Marathonien</i>, <i>Guerrier du week-end</i>…), ton jour et ton heure préférés, tes séries de jours, et <b>10 badges PlayTrace</b> à débloquer.
+    </td>
+    <td valign="top">
+      <h3>📅 Calendrier & heatmap</h3>
+      L'année jour par jour à la GitHub, et la heatmap jour × heure (en tranches de 3 h sur mobile) pour voir <i>quand</i> tu joues vraiment.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <h3>🏆 Une fiche par jeu</h3>
+      Succès <b>obtenus / manquants</b> avec leur rareté mondiale, succès <b>« à portée de main »</b>, courbe de progression, infos du Store, Metacritic et tes sessions sur ce jeu.
+    </td>
+    <td valign="top">
+      <h3>📚 Toute ta bibliothèque</h3>
+      Recherche sans accents, tris (temps, récents, succès, suivi, A → Z), filtres <i>En cours / Complétés / Jamais lancés</i> et le % de succès sur chaque jaquette.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <h3>⚔️ Défis entre amis</h3>
+      Profil public optionnel partageable par lien, et <b>duel</b> : score de compatibilité, face-à-face, jeux en commun, et les favoris de ton ami que tu n'as pas.
+    </td>
+    <td valign="top">
+      <h3>🖼️ Ton Wrapped en image</h3>
+      Une image au format story (1080 × 1920) avec ton avatar, tes heures, ton jeu de l'année, ton top 5 et ta personnalité. Partage natif sur mobile.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <h3>📥 Téléchargements Steam</h3>
+      Les jeux que ton client Steam télécharge, met à jour ou installe : progression, vitesse, temps restant. Lus sur ton PC par un petit agent local.
+    </td>
+    <td valign="top">
+      <h3>⚡ Et tout le confort</h3>
+      Recherche rapide <kbd>Ctrl</kbd> + <kbd>K</kbd>, notifications de fin de session, mode démarrage pour les nouveaux joueurs, appli <b>installable (PWA)</b>, responsive de 320 à 1920 px.
+    </td>
+  </tr>
+</table>
 
 ---
 
-## 🚀 Fonctionnalités
+## 📸 En images
 
-### MVP
-- 🔐 Connexion via **Steam OpenID**
-- 📡 Détection du jeu en cours (sondage serveur toutes les 60 s)
-- 💾 Enregistrement des sessions (jeu, début, fin, durée)
-- 🔴 Bandeau **« En train de jouer à… »** en direct, qui pulse
-- 📊 Stats : heures totales, **top 5** des jeux, **jeu de l'année**
-- 📥 **Téléchargements en cours** : jeux que ton client Steam télécharge, met à jour ou installe (progression, vitesse, temps restant)
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/story.png" alt="Mode Story : le jeu de l'année" /><p align="center"><b>Mode Story</b> · le Wrapped en slides</p></td>
+    <td width="50%"><img src="docs/screenshots/profile.png" alt="Profil de joueur et badges" /><p align="center"><b>Profil de joueur</b> · personnalité et badges</p></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/game.png" alt="Fiche d'un jeu avec succès et progression" /><p align="center"><b>Fiche jeu</b> · succès, rareté, progression</p></td>
+    <td><img src="docs/screenshots/library.png" alt="Bibliothèque avec progression des succès" /><p align="center"><b>Mes jeux</b> · bibliothèque et % de succès</p></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/calendar.png" alt="Calendrier de l'année et heatmap" /><p align="center"><b>Calendrier</b> · l'année jour par jour</p></td>
+    <td><img src="docs/screenshots/duel.png" alt="Duel entre deux joueurs" /><p align="center"><b>Duel</b> · compatibilité et face-à-face</p></td>
+  </tr>
+</table>
 
-### Bonus
-- 🔥 Heatmap d'activité par jour et par heure
-- 🧬 Répartition par genre *(à venir)*
-- 🖼️ Export du Wrapped en image (format story 1080 × 1920)
-- ⚔️ Duel de profils entre amis, avec score de compatibilité
-
-### Et aussi
-- 🎬 **Mode Story** : le Wrapped raconté en slides plein écran, façon stories
-- 🧠 **Profil de joueur** : personnalité, séries de jours, 10 badges PlayTrace à débloquer
-- 📅 **Calendrier** de l'année, jour par jour, et **sélecteur d'année**
-- 🏆 **Fiche de chaque jeu** : succès obtenus / manquants, rareté mondiale, succès « à portée de main », courbe de progression
-- 📚 **Mes jeux** : toute la bibliothèque, recherche, tris et % de succès par jeu
-- ⌨️ **Recherche rapide** `Ctrl + K`
-- 🔔 **Notifications** de début et de fin de session (toast + notification du navigateur)
-- 🌍 **Profil public** optionnel (désactivé par défaut), partageable par lien
-- 📱 **Application installable** (PWA), utilisable hors ligne pour la coquille de l'app
-
----
-
-## 🎬 Design et animations
-
-- **Thème** : sombre, moderne, accents néon
-- **Hero** : fond animé + compteur d'heures qui monte en direct
-- **Scroll** : les cartes (top jeux, jeu de l'année, heatmap) apparaissent au défilement
-- **Expériences / timeline** : défilement **alterné** gauche/droite pour l'historique des sessions
-- **Bandeau live** : bordure lumineuse et pulsation quand un jeu est détecté
-- **Marquee** : défilement continu des jaquettes des jeux joués
+<img src="docs/screenshots/mobile.png" alt="PlayTrace sur mobile : Wrapped, Story et succès" width="100%" />
 
 ---
 
 ## 🏗️ Architecture
 
+```mermaid
+flowchart LR
+    subgraph Navigateur["🖥️ Navigateur · React + Motion"]
+        UI[Wrapped · Story · Fiches · Défis]
+    end
+
+    subgraph Vercel["▲ Vercel"]
+        Front[Front statique · Vite]
+        API["api/index.js<br/>Node sans framework"]
+    end
+
+    subgraph Supabase["⚡ Supabase"]
+        DB[(Postgres<br/>schéma playtrace)]
+        Cron[pg_cron · chaque minute]
+    end
+
+    Steam[(🎮 API Web Steam<br/>+ Store)]
+    Agent["💻 Agent local<br/>npm run agent"]
+
+    UI -- "OpenID · REST · SSE" --> API
+    UI --> Front
+    Cron -- "GET /api/cron/poll" --> API
+    API -- "sondage, succès, bibliothèque" --> Steam
+    API <-- SQL --> DB
+    Agent -- "POST /api/agent/downloads" --> API
 ```
-┌──────────────┐   OpenID    ┌──────────────────────┐  sondage   ┌────────────┐
-│  Navigateur  │◄───────────►│  Vercel              │───────────►│ API Steam  │
-│  React + UI  │   SSE ◄─────│  front + api/index.js│            └────────────┘
-└──────────────┘             └──────────┬───────────┘
-                                        │ SQL               ▲ GET /api/cron/poll
-                                        ▼                   │ (toutes les minutes)
-                                 ┌──────────────────────────┴─┐
-                                 │  Supabase Postgres         │
-                                 │  schéma playtrace + pg_cron│
-                                 └────────────────────────────┘
-┌──────────────────────┐  POST /api/agent/downloads
-│ PC avec Steam        │─────────────────────────────► Vercel
-│ npm run agent        │  (téléchargements en cours)
-└──────────────────────┘
-```
 
-- **Sur Vercel**, aucune fonction ne tourne en continu : c'est `pg_cron` (Supabase) qui appelle `/api/cron/poll` chaque minute, et le flux SSE envoie l'état puis se reconnecte toutes les 15 s.
-- **En local**, `npm run server` fait tout dans un seul process : sondage toutes les 60 s, SSE ouvert en continu, lecture directe des téléchargements Steam.
-
----
-
-## 🗄️ Modèle de données
-
-**`users`**
-| Champ | Type |
+| Pièce | Rôle |
 |---|---|
-| steamid64 | TEXT (clé primaire) |
-| pseudo | TEXT |
-| avatar | TEXT |
-| created_at | TIMESTAMPTZ |
+| **Sondage** | `pg_cron` (Supabase) appelle `/api/cron/poll` chaque minute ; un seul appel `GetPlayerSummaries` couvre tous les joueurs (100 par requête). |
+| **Sessions** | Ouvertes et fermées à chaque changement de jeu ; une coupure du serveur ne compte jamais comme du jeu (`last_seen_at`). |
+| **Temps réel** | SSE : flux continu en local, reconnexion toutes les 15 s sur Vercel (fonctions éphémères). |
+| **Caches** | Bibliothèque 1 h, progression des succès 6 h, fiches Store et succès 7 j, rareté 1 j, visuels 7 j. |
+| **Visuels** | `/api/art/:appid/:type` résout les nouvelles URL du CDN Steam (fichiers avec hash) et redirige, mise en cache par le CDN de Vercel. |
+| **En local** | `npm run server` fait tout dans un seul process : sondage, SSE continu et lecture directe des téléchargements Steam. |
 
-**`sessions`**
-| Champ | Type |
+---
+
+## 🧱 Stack
+
+| Couche | Technologies |
 |---|---|
-| id | BIGINT (clé primaire) |
-| steamid64 | TEXT |
-| appid | INTEGER |
-| game_name | TEXT |
-| started_at | TIMESTAMPTZ |
-| ended_at | TIMESTAMPTZ |
-| duration_s | INTEGER |
-| last_seen_at | TIMESTAMPTZ |
-
-**Cache** : liste des jeux possédés (`GetOwnedGames`), rafraîchie 1 fois par heure.
-
-Tout vit dans le schéma `playtrace` (non exposé par l'API REST de Supabase), créé par [`server/schema.sql`](server/schema.sql). L'app s'y connecte avec un rôle dédié `playtrace_app` qui n'a accès qu'à ce schéma.
+| Front | **React 18**, **Vite 5**, routeur maison (API History) |
+| Style | **Tailwind CSS**, composants **shadcn/ui** |
+| Animations | **Motion** (motion.dev), effets inspirés de React Bits, Aceternity UI, Magic UI |
+| Back | **Node.js sans framework** (module `http`), une seule fonction Vercel |
+| Base | **PostgreSQL** (Supabase), driver `postgres`, schéma dédié `playtrace` |
+| Planification | `pg_cron` + `pg_net` |
+| Données | API Web Steam, API du Store, fichiers `appmanifest_*.acf` du client Steam |
+| Logos | `simple-icons` (CC0) · police Inter Variable |
 
 ---
 
-## 🔒 Sécurité
+## 🔒 Sécurité & vie privée
 
-- 🔑 **Clé API uniquement côté serveur**, dans `.env` (jamais dans le code React)
-- ✅ Validation stricte du format **SteamID64** (17 chiffres)
-- 🚦 Limitation de requêtes par IP
-- 🧱 Requêtes SQL **paramétrées**
-- 🔁 **Un seul sondage serveur** partagé entre tous les visiteurs
-- 🪪 Authentification via Steam OpenID, vérification côté serveur
-- 🛡️ En-têtes de sécurité (CSP, `X-Content-Type-Options`, etc.)
-- 📦 Build de production **minifié** (Vite)
+- 🔑 **Clé API Steam uniquement côté serveur**, jamais envoyée au navigateur.
+- 🪪 **Steam OpenID** vérifié côté serveur (`check_authentication`), avec un état anti-CSRF et des **nonces anti-rejeu** stockés en base.
+- 🍪 Session dans un **cookie signé HMAC**, `HttpOnly`, `SameSite=Lax`, `Secure` en HTTPS.
+- 🧱 Requêtes SQL **paramétrées**, rôle Postgres **dédié** limité au schéma `playtrace` (non exposé par l'API REST de Supabase).
+- 🛡️ En-têtes de sécurité : **CSP** stricte, `X-Frame-Options`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`, HSTS.
+- 🚦 **Limitation de requêtes** par IP, jetons secrets pour le cron et l'agent (comparés en temps constant).
+- 🌍 **Profil public désactivé par défaut.** Activé, il ne montre que des agrégats (heures, top 5, personnalité, badges, calendrier) : **jamais** le détail ni les horaires des sessions, la partie en cours ou les téléchargements.
 
-> ⚠️ La minification et l'obfuscation ralentissent l'inspection du code client, mais ne le protègent pas : tout ce qui arrive dans le navigateur est lisible. **Seul ce qui reste sur le serveur est réellement protégé.**
+> ⚠️ La minification ralentit l'inspection du code client mais ne le protège pas : tout ce qui arrive dans le navigateur est lisible. **Seul ce qui reste sur le serveur est réellement protégé.**
 
 ---
 
-## ⚙️ Installation
+## 🚀 Installation
+
+> **Prérequis** : Node.js 22+, une clé API Steam ([steamcommunity.com/dev/apikey](https://steamcommunity.com/dev/apikey)) et une base Postgres (Supabase gratuit).
 
 ```bash
-# 1. Cloner le dépôt
-git clone https://github.com/<ton-pseudo>/playtrace.git
-cd playtrace
-
-# 2. Installer les dépendances
+git clone https://github.com/LaFicelleCmoi/PlayTrace.git
+cd PlayTrace
 npm install
+cp .env.example .env   # puis renseigne STEAM_API_KEY et DATABASE_URL
+```
 
-# 3. Configurer l'environnement
-cp .env.example .env
-# puis renseigner STEAM_API_KEY et DATABASE_URL dans .env
+Crée le schéma avec [`server/schema.sql`](server/schema.sql), puis lance l'API et le front dans deux terminaux :
 
-# 4. Lancer le serveur
+```bash
 npm run server
+```
 
-# 5. Lancer le front (autre terminal)
+```bash
 npm run dev
 ```
 
-**`.env.example`**
-```env
-STEAM_API_KEY=ta_cle_api_steam
-DATABASE_URL=postgresql://playtrace_app.<ref>:<mot_de_passe>@aws-1-eu-west-3.pooler.supabase.com:6543/postgres
-PORT=3000
-BASE_URL=http://localhost:5173
-SESSION_SECRET=une_longue_chaine_aleatoire_d_au_moins_32_caracteres
-POLL_INTERVAL_MS=60000
-CRON_SECRET=jeton_du_cron
-AGENT_TOKEN=jeton_de_l_agent
-AGENT_URL=https://play-trace-nine.vercel.app
-# Optionnels, pour les téléchargements en cours (détectés automatiquement sinon)
-# STEAM_PATH=/mnt/c/Program Files (x86)/Steam
-# STEAM_LOCAL_STEAMID=7656119XXXXXXXXXX
-```
+Ouvre **http://localhost:5173** et connecte-toi avec Steam.
 
-> Ajoute `.env` au `.gitignore` **avant** ton premier commit.
+<details>
+<summary><b>📋 Variables d'environnement</b></summary>
 
-La clé API s'obtient sur : https://steamcommunity.com/dev/apikey (nom de domaine : `localhost` en local).
+| Variable | Rôle |
+|---|---|
+| `STEAM_API_KEY` | Clé API Web Steam (obligatoire) |
+| `DATABASE_URL` | Postgres, pooler Supabase en mode transaction (port 6543) |
+| `SESSION_SECRET` | Au moins 32 caractères aléatoires, signe les cookies |
+| `BASE_URL` | URL vue par le navigateur (`http://localhost:5173` en local) |
+| `PORT` | Port du serveur Node local (3000) |
+| `POLL_INTERVAL_MS` | Fréquence du sondage local (60 000, minimum 30 000) |
+| `CRON_SECRET` | Jeton exigé par `/api/cron/poll` |
+| `AGENT_TOKEN` · `AGENT_URL` | Jeton et site cible de l'agent des téléchargements |
+| `STEAM_PATH` · `STEAM_LOCAL_STEAMID` | Optionnels : dossier du client Steam et compte associé (détectés automatiquement) |
+
+</details>
+
+<details>
+<summary><b>📜 Scripts npm</b></summary>
+
+| Script | Effet |
+|---|---|
+| `npm run dev` | Front Vite avec proxy vers l'API |
+| `npm run server` | API Node locale (sondage + SSE + téléchargements), rechargée à chaque modification |
+| `npm run agent` | Envoie les téléchargements de ton client Steam au site déployé |
+| `npm run build` | Build de production du front |
+| `npm start` | Serveur Node de production qui sert aussi le front (`dist/`) |
+
+</details>
 
 ---
 
-## ☁️ Déploiement (Vercel + Supabase)
+## ☁️ Déploiement
 
-1. **Supabase** : exécuter [`server/schema.sql`](server/schema.sql), créer le rôle `playtrace_app` (droits sur le schéma `playtrace` uniquement), puis activer `pg_cron` et `pg_net` et programmer l'appel :
+**Vercel + Supabase**, chaque push sur `main` redéploie automatiquement.
+
+1. **Supabase** : exécute [`server/schema.sql`](server/schema.sql), crée un rôle `playtrace_app` limité au schéma `playtrace`, active `pg_cron` et `pg_net`, puis programme le sondage :
    ```sql
    SELECT cron.schedule('playtrace-poll', '* * * * *', $$
      SELECT net.http_get(
-       url := 'https://play-trace-nine.vercel.app/api/cron/poll',
+       url := 'https://<ton-site>/api/cron/poll',
        headers := jsonb_build_object('Authorization', 'Bearer <CRON_SECRET>')
      ) $$);
    ```
-2. **Vercel** : importer le dépôt (preset Vite). [`vercel.json`](vercel.json) envoie `/api/*` et `/auth/*` vers la fonction [`api/index.js`](api/index.js), dans la région `cdg1` (Paris, à côté de la base).
-3. **Variables Vercel** : `STEAM_API_KEY`, `DATABASE_URL`, `SESSION_SECRET`, `CRON_SECRET`, `AGENT_TOKEN`, `BASE_URL` (URL publique du site).
-4. **Téléchargements en cours** : sur le PC qui a Steam, avec le même `AGENT_TOKEN` dans `.env` :
+2. **Vercel** : importe le dépôt (preset Vite). [`vercel.json`](vercel.json) envoie `/api/*` et `/auth/*` vers [`api/index.js`](api/index.js), en région `cdg1` (Paris), et sert le front pour `/jeux`, `/defis`, `/joueur/*` et `/duel/*`.
+3. **Variables Vercel** : `STEAM_API_KEY`, `DATABASE_URL`, `SESSION_SECRET`, `CRON_SECRET`, `AGENT_TOKEN`, `BASE_URL`.
+4. **Téléchargements** (optionnel) : sur le PC qui a Steam, avec le même `AGENT_TOKEN` :
    ```bash
    npm run agent
    ```
 
-Chaque push sur `main` redéploie automatiquement.
+<details>
+<summary><b>🔌 Routes de l'API</b></summary>
+
+| Méthode | Route | Rôle |
+|---|---|---|
+| `GET` | `/auth/steam` · `/auth/steam/return` | Connexion Steam OpenID |
+| `POST` | `/auth/logout` | Déconnexion |
+| `GET` | `/api/me` | Joueur connecté |
+| `POST` | `/api/me/public` | Active / désactive le profil public |
+| `GET` | `/api/stats?year=&tz=` | Stats de l'année, heatmap, calendrier, bibliothèque |
+| `GET` | `/api/sessions` | Dernières sessions |
+| `GET` | `/api/live` | Flux SSE : partie en cours et téléchargements |
+| `GET` | `/api/games` | Bibliothèque complète |
+| `GET` | `/api/games/achievements` | Progression des succès de chaque jeu |
+| `GET` | `/api/games/:appid` | Fiche d'un jeu : Store, temps, sessions, succès |
+| `GET` | `/api/art/:appid/:type` | Redirection vers le bon visuel Steam |
+| `GET` | `/api/public/:steamid` | Profil public (sans connexion) |
+| `GET` | `/api/duel/:steamid` | Duel avec un profil public |
+| `GET` | `/api/cron/poll` | Sondage Steam (jeton `CRON_SECRET`) |
+| `POST` | `/api/agent/downloads` | Téléchargements envoyés par l'agent (jeton `AGENT_TOKEN`) |
+
+</details>
 
 ---
 
-## 📁 Structure du projet
+## 📁 Structure
 
 ```
-playtrace/
+PlayTrace/
+├── api/index.js              # fonction Vercel unique
 ├── server/
-│   ├── app.js            # routes, communes au local et à Vercel
-│   ├── index.js          # serveur Node local (sondage + SSE continus)
-│   ├── agent.js          # envoie les téléchargements Steam au site déployé
-│   ├── config.js         # lecture et validation du .env
-│   ├── poller.js         # sondage GetPlayerSummaries
-│   ├── sessions.js       # ouverture / fermeture des sessions
-│   ├── stats.js          # stats annuelles, top 5, heatmap
-│   ├── library.js        # cache GetOwnedGames (1 h)
-│   ├── steam.js          # appels à l'API Web Steam
-│   ├── sse.js            # flux temps réel
-│   ├── downloads.js      # téléchargements du client Steam local
-│   ├── vdf.js            # lecture des fichiers .vdf / .acf de Steam
-│   ├── auth.js           # Steam OpenID + cookie de session signé
-│   ├── security.js       # en-têtes, limitation par IP
-│   ├── static.js         # sert le build Vite en production
-│   ├── users.js          # profils
-│   ├── schema.sql        # schéma Postgres
-│   └── db.js             # client Postgres (Supabase)
-├── api/
-│   └── index.js          # fonction Vercel
+│   ├── app.js                # routes, communes au local et à Vercel
+│   ├── index.js              # serveur Node local (sondage + SSE continus)
+│   ├── agent.js              # agent local des téléchargements
+│   ├── poller.js · sessions.js · stats.js
+│   ├── games.js · library.js · social.js
+│   ├── steam.js              # API Web Steam et Store
+│   ├── auth.js · security.js # OpenID, cookies, CSP, limitation
+│   ├── downloads.js · vdf.js # client Steam local (.acf / .vdf)
+│   ├── sse.js · static.js · users.js · config.js · db.js
+│   └── schema.sql            # schéma Postgres
 ├── src/
-│   ├── components/
-│   │   ├── ui/           # shadcn/ui + composants animés
-│   │   ├── LiveBanner.jsx
-│   │   ├── DownloadsPanel.jsx
-│   │   ├── TopGames.jsx
-│   │   ├── GameOfTheYear.jsx
-│   │   ├── Heatmap.jsx
-│   │   └── SessionTimeline.jsx
-│   ├── hooks/
-│   │   └── useLiveStatus.js   # abonnement SSE
-│   ├── App.jsx
-│   └── main.jsx
-├── .env.example
-├── .gitignore
-├── vercel.json
-└── package.json
+│   ├── pages/                # Wrapped, Library, GameDetail, Challenges, Duel, PublicProfile
+│   ├── components/           # Hero, LiveBanner, WrappedStory, Achievements, Footer…
+│   │   └── ui/               # shadcn/ui + composants animés
+│   ├── hooks/                # useLiveStatus (SSE), useStats, useApi…
+│   └── lib/                  # router, insights, shareImage, toast, install…
+├── public/                   # manifeste PWA, service worker, icônes
+├── docs/                     # bannière et captures du README
+└── vercel.json
 ```
-
-> **Node.js 22 ou plus** est requis.
-
-**Sans Vercel** : `npm run build` puis `npm start` (le serveur Node sert alors le front sur `PORT`, pense à mettre `BASE_URL` à jour).
 
 ---
 
-## ⚠️ Contraintes
+## ⚠️ Bon à savoir
 
-- Le **profil** et les **détails des jeux** doivent être en **public** sur Steam
-- Environ **100 000 requêtes par jour** par clé : un sondage par minute en consomme environ 1 440
-- Un Wrapped annuel n'est vraiment riche qu'après plusieurs semaines de collecte
-- L'API Web Steam ne donne **pas** les téléchargements : PlayTrace lit les fichiers `appmanifest_*.acf` du client Steam installé sur ton PC (y compris Steam Windows vu depuis WSL via `/mnt/c`), via `npm run server` ou `npm run agent`. Ils ne sont visibles que par le compte connecté à ce client, et disparaissent du site si l'agent ne donne plus de nouvelles depuis 45 s
-- Le serveur local et Vercel partagent la même base si `DATABASE_URL` est la même : évite de laisser `npm run server` tourner en même temps que la prod, sinon Steam est sondé deux fois
+- Le **profil Steam** et les **détails des jeux** doivent être **publics** (Steam → Modifier le profil → Confidentialité) pour la détection du jeu en cours et les succès.
+- L'historique précis commence **à l'activation du suivi** : un Wrapped est vraiment riche après quelques semaines.
+- Environ **100 000 requêtes / jour** par clé Steam : un sondage par minute en consomme ~1 440, quel que soit le nombre de joueurs (100 par requête).
+- Les **téléchargements** ne sont visibles que si `npm run server` ou `npm run agent` tourne sur le PC qui a Steam.
 
 ---
 
 ## 🗺️ Roadmap
 
 - [x] Back : OpenID, sondage, stockage des sessions
-- [x] Route SSE
-- [x] Front React : dashboard et bandeau live
-- [x] Animations et effets (Motion + bibliothèques UI)
-- [x] Stats avancées : heatmap, calendrier, profil de joueur
+- [x] Temps réel (SSE) et bandeau live
+- [x] Front React : Wrapped, animations, responsive
+- [x] Stats avancées : heatmap, calendrier, profil de joueur, badges
+- [x] Fiches jeux, succès et bibliothèque
 - [x] Sécurisation et déploiement (Vercel + Supabase)
-- [x] Export image et duel entre amis
+- [x] Export image, profil public et duel entre amis
+- [x] PWA installable
 - [ ] Répartition par genre
 
 ---
@@ -308,10 +344,12 @@ playtrace/
 
 **LaFicelleCmoi** : étudiant à EPITECH Marseille, passionné de jeux vidéo, d'animes, de nouvelles technologies et de Formule 1.
 
----
-
 <div align="center">
 
+<br />
+
 *Fait avec ☕, du néon et beaucoup de parties de Steam.*
+
+<sub>PlayTrace est un projet indépendant, non affilié à Valve. Données fournies par l'API Web Steam.</sub>
 
 </div>
