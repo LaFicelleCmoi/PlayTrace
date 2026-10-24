@@ -10,11 +10,12 @@ import {
   verifyLogin,
 } from './auth.js';
 import { db } from './db.js';
+import { getDownloads, startDownloadWatcher, stopDownloadWatcher } from './downloads.js';
 import { ensureLibrary, getLibrarySummary } from './library.js';
 import { pollOnce, startPoller, stopPoller } from './poller.js';
 import { applySecurityHeaders, clientIp, createRateLimiter, isSameOrigin } from './security.js';
 import { getLiveStatus, getRecentSessions } from './sessions.js';
-import { closeAllStreams, subscribe } from './sse.js';
+import { closeAllStreams, publish, subscribe } from './sse.js';
 import { serveStatic } from './static.js';
 import { getYearStats } from './stats.js';
 import { getPlayerSummaries } from './steam.js';
@@ -88,7 +89,10 @@ const routes = {
   'GET /api/live': (req, res) => {
     const user = requireUser(req, res);
     if (!user) return;
-    subscribe(req, res, user.steamid64, getLiveStatus(user.steamid64));
+    subscribe(req, res, user.steamid64, {
+      status: getLiveStatus(user.steamid64),
+      downloads: getDownloads(user.steamid64),
+    });
   },
 
   'GET /auth/steam': (req, res) => {
@@ -145,10 +149,16 @@ const server = createServer((req, res) => {
 server.listen(config.port, config.host, () => {
   console.log(`PlayTrace écoute sur http://${config.host}:${config.port} (front : ${config.baseUrl})`);
   startPoller();
+  startDownloadWatcher((next, previous) => {
+    // Changement de compte sur le client Steam : l'ancien compte ne doit plus voir ces téléchargements.
+    if (previous.owner && previous.owner !== next.owner) publish(previous.owner, 'downloads', []);
+    if (next.owner) publish(next.owner, 'downloads', next.downloads);
+  });
 });
 
 function shutdown() {
   stopPoller();
+  stopDownloadWatcher();
   closeAllStreams();
   server.close(() => {
     db.close();
