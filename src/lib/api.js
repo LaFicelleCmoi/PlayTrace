@@ -18,6 +18,23 @@ export const api = {
   sessions: (limit = 20) => request(`/api/sessions?limit=${limit}`),
   games: () => request('/api/games'),
   game: (appid) => request(`/api/games/${appid}`),
+  setTracking: (paused) =>
+    request('/api/me/tracking', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paused }),
+    }),
+  logoutAll: () => request('/api/me/logout-all', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    }),
+  deleteAccount: (confirm) =>
+    request('/api/me/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ confirm }),
+    }),
   setPublicProfile: (enabled) =>
     request('/api/me/public', {
       method: 'POST',
