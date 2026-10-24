@@ -9,7 +9,7 @@ import { formatNumber } from '@/lib/format';
 import { Link } from '@/lib/router';
 import { cn } from '@/lib/utils';
 
-export function GameOfTheYear({ stats }) {
+export function GameOfTheYear({ stats, interactive = true }) {
   const tracked = stats.gameOfTheYear;
   const fallback = stats.library.topGames[0];
   const game = tracked ?? (fallback && { appid: fallback.appid, name: fallback.name, seconds: fallback.minutes * 60 });
@@ -53,12 +53,14 @@ export function GameOfTheYear({ stats }) {
                   </>
                 )}
               </div>
+              {interactive && (
               <Link
                 to={`/jeux/${game.appid}`}
                 className={cn(buttonVariants({ variant: 'outline' }), 'mt-6 bg-background/60 backdrop-blur')}
               >
                 Voir le détail et les succès
               </Link>
+              )}
             </div>
           </div>
           <BorderBeam width={2} />
