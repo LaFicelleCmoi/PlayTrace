@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { DownloadsPanel } from '@/components/DownloadsPanel';
 import { GameOfTheYear } from '@/components/GameOfTheYear';
 import { GamesMarquee } from '@/components/GamesMarquee';
 import { Heatmap } from '@/components/Heatmap';
@@ -45,7 +46,7 @@ function Header({ user }) {
 }
 
 function Dashboard({ user }) {
-  const { status, connection } = useLiveStatus();
+  const { status, downloads, connection } = useLiveStatus();
   const { stats, sessions, error, reload } = useStats(YEAR, `${status?.sessionId}-${status?.playing}`);
   const playing = Boolean(status?.playing);
   const now = useNow(playing);
@@ -77,6 +78,7 @@ function Dashboard({ user }) {
     <main className="pt-14">
       <Hero user={user} stats={stats} trackedSeconds={trackedSeconds} />
       <LiveBanner status={status} connection={connection} />
+      <DownloadsPanel downloads={downloads} />
       <GamesMarquee stats={stats} />
       <TopGames stats={stats} />
       <GameOfTheYear stats={stats} />
