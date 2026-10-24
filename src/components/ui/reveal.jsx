@@ -2,8 +2,8 @@ import { motion } from 'motion/react';
 
 const OFFSETS = {
   up: { y: 40 },
-  left: { x: -60 },
-  right: { x: 60 },
+  left: { x: -40 },
+  right: { x: 40 },
 };
 
 /** Fait apparaître son contenu au défilement (Motion `whileInView`). */
