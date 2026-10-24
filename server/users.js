@@ -2,9 +2,13 @@ import { sql } from './db.js';
 
 export async function getUser(steamid) {
   const [user] = await sql`
-    SELECT steamid64, pseudo, avatar, created_at FROM playtrace.users WHERE steamid64 = ${steamid}
+    SELECT steamid64, pseudo, avatar, created_at, public_profile FROM playtrace.users WHERE steamid64 = ${steamid}
   `;
   return user ?? null;
+}
+
+export async function setPublicProfile(steamid, enabled) {
+  await sql`UPDATE playtrace.users SET public_profile = ${enabled} WHERE steamid64 = ${steamid}`;
 }
 
 export async function listUserIds() {
