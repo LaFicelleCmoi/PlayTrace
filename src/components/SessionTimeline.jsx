@@ -8,6 +8,7 @@ import { GameImage } from '@/components/GameImage';
 import { SectionTitle } from '@/components/SectionTitle';
 import { useNow } from '@/hooks/useNow';
 import { formatDateTime, formatDuration } from '@/lib/format';
+import { Link } from '@/lib/router';
 import { cn } from '@/lib/utils';
 
 const PAGE_SIZE = 8;
@@ -15,7 +16,10 @@ const PAGE_SIZE = 8;
 function SessionCard({ session, now }) {
   const seconds = session.live ? (now - Date.parse(session.started_at)) / 1000 : session.duration_s;
   return (
-    <div className="flex min-w-0 gap-3 rounded-xl border bg-card/80 p-2.5 backdrop-blur sm:p-3">
+    <Link
+      to={`/jeux/${session.appid}`}
+      className="flex min-w-0 gap-3 rounded-xl border bg-card/80 p-2.5 backdrop-blur transition-colors hover:border-neon-violet/40 sm:p-3"
+    >
       <GameImage appid={session.appid} alt={session.game_name} className="aspect-[460/215] w-20 shrink-0 rounded-md sm:w-28" />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold sm:text-base">{session.game_name}</p>
@@ -25,7 +29,7 @@ function SessionCard({ session, now }) {
           {session.live && <Badge variant="live">en cours</Badge>}
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
 
