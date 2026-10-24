@@ -13,7 +13,8 @@
     { "source": "/jeux", "destination": "/index.html" },
     { "source": "/jeux/:path*", "destination": "/index.html" },
     { "source": "/joueur/:path*", "destination": "/index.html" },
-    { "source": "/duel/:path*", "destination": "/index.html" }
+    { "source": "/duel/:path*", "destination": "/index.html" },
+    { "source": "/defis", "destination": "/index.html" }
   ],
   "headers": [
     {
