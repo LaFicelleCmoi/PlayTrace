@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence } from 'motion/react';
+import { Pause } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DeferredSection } from '@/components/DeferredSection';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -20,6 +21,7 @@ import { YearCalendar } from '@/components/YearCalendar';
 import { useNow } from '@/hooks/useNow';
 import { useStats } from '@/hooks/useStats';
 import { computeInsights } from '@/lib/insights';
+import { Link } from '@/lib/router';
 import { renderWrappedImage, shareOrDownload } from '@/lib/shareImage';
 
 const YEAR = new Date().getFullYear();
@@ -45,7 +47,7 @@ const SECTIONS = [
 ];
 
 /** Page d'accueil : le Wrapped d'une année (l'année en cours par défaut). */
-export function Wrapped({ user, live, isPublic, onPublicChange }) {
+export function Wrapped({ user, live, isPublic, onPublicChange, trackingPaused }) {
   const { status, downloads, connection } = live;
   const [year, setYear] = useState(yearFromUrl);
   const { stats, sessions, error, reload } = useStats(year, `${status?.sessionId}-${status?.playing}`);
@@ -120,6 +122,17 @@ export function Wrapped({ user, live, isPublic, onPublicChange }) {
         isPublic={isPublic}
         onChange={onPublicChange}
       />
+      {trackingPaused && (
+        <div className="container relative z-20 -mt-6 mb-2 sm:-mt-8">
+          <Link to="/compte" className="flex items-center gap-3 rounded-2xl border border-dashed border-white/15 bg-card/80 p-4 text-sm backdrop-blur transition-colors hover:border-white/30">
+            <Pause className="size-5 shrink-0 text-muted-foreground" />
+            <span className="min-w-0 flex-1">
+              <strong>Suivi en pause.</strong> <span className="text-muted-foreground">Tes nouvelles parties ne sont pas enregistrées.</span>
+            </span>
+            <span className="shrink-0 text-xs text-neon-cyan">Relancer</span>
+          </Link>
+        </div>
+      )}
       <LiveBanner status={status} connection={connection} />
       <DownloadsPanel downloads={downloads} />
       {starter && <StarterCard stats={stats} insights={insights} />}
