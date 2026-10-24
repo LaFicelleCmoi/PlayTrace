@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { Button } from '@/components/ui/button';
+import { DeferredSection } from '@/components/DeferredSection';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DownloadsPanel } from '@/components/DownloadsPanel';
 import { GameOfTheYear } from '@/components/GameOfTheYear';
@@ -9,7 +10,9 @@ import { Heatmap } from '@/components/Heatmap';
 import { Hero } from '@/components/Hero';
 import { LiveBanner } from '@/components/LiveBanner';
 import { PlayerProfile } from '@/components/PlayerProfile';
+import { SectionNav } from '@/components/SectionNav';
 import { SessionTimeline } from '@/components/SessionTimeline';
+import { isStarter, StarterCard } from '@/components/StarterCard';
 import { TopGames } from '@/components/TopGames';
 import { WrappedStory } from '@/components/WrappedStory';
 import { YearCalendar } from '@/components/YearCalendar';
@@ -20,6 +23,15 @@ import { renderWrappedImage, shareOrDownload } from '@/lib/shareImage';
 
 const YEAR = new Date().getFullYear();
 
+const SECTIONS = [
+  { id: 'top', label: 'Top 5' },
+  { id: 'jeu-de-l-annee', label: 'Jeu de l’année' },
+  { id: 'profil', label: 'Profil' },
+  { id: 'calendrier', label: 'Calendrier' },
+  { id: 'heatmap', label: 'Heatmap' },
+  { id: 'historique', label: 'Historique' },
+];
+
 /** Page d'accueil : le Wrapped de l'année en cours. */
 export function Wrapped({ user, live }) {
   const { status, downloads, connection } = live;
@@ -27,6 +39,7 @@ export function Wrapped({ user, live }) {
   const playing = Boolean(status?.playing);
   const now = useNow(playing);
   const insights = useMemo(() => (stats ? computeInsights(stats) : null), [stats]);
+  const starter = stats && insights ? isStarter(stats, insights) : false;
   const [storyOpen, setStoryOpen] = useState(false);
   const [sharing, setSharing] = useState(false);
 
@@ -74,13 +87,45 @@ export function Wrapped({ user, live }) {
       />
       <LiveBanner status={status} connection={connection} />
       <DownloadsPanel downloads={downloads} />
+      {starter && <StarterCard stats={stats} insights={insights} />}
       <GamesMarquee stats={stats} />
-      <TopGames stats={stats} />
-      <GameOfTheYear stats={stats} />
-      <PlayerProfile insights={insights} />
-      <YearCalendar year={stats.year} daily={stats.daily} trackingSince={stats.trackingSince} />
-      <Heatmap heatmap={stats.heatmap} />
-      <SessionTimeline sessions={sessions} />
+      <SectionNav sections={SECTIONS} />
+      <div id="top" className="scroll-mt-32">
+        <TopGames stats={stats} />
+      </div>
+      <div id="jeu-de-l-annee" className="scroll-mt-32">
+        <GameOfTheYear stats={stats} />
+      </div>
+      <DeferredSection
+        id="profil"
+        deferred={starter}
+        eyebrow="Ton profil"
+        title="Quel joueur es-tu ?"
+        reason="Ta personnalité et tes badges s’affinent après 5 sessions sur 3 jours."
+      >
+        <PlayerProfile insights={insights} />
+      </DeferredSection>
+      <DeferredSection
+        id="calendrier"
+        deferred={starter}
+        eyebrow="Calendrier"
+        title={`Ton ${stats.year}, jour par jour`}
+        reason="Il s’allume au fil de tes jours de jeu."
+      >
+        <YearCalendar year={stats.year} daily={stats.daily} trackingSince={stats.trackingSince} />
+      </DeferredSection>
+      <DeferredSection
+        id="heatmap"
+        deferred={starter}
+        eyebrow="Heatmap"
+        title="Quand est-ce que tu joues ?"
+        reason="Tes créneaux préférés apparaissent après quelques sessions."
+      >
+        <Heatmap heatmap={stats.heatmap} />
+      </DeferredSection>
+      <div id="historique" className="scroll-mt-32">
+        <SessionTimeline sessions={sessions} />
+      </div>
       <AnimatePresence>
         {storyOpen && <WrappedStory user={user} stats={stats} insights={insights} onClose={() => setStoryOpen(false)} />}
       </AnimatePresence>
