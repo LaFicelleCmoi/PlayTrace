@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { Gamepad2, LibraryBig, LogOut, Search, Sparkles } from 'lucide-react';
+import { Gamepad2, LibraryBig, LogOut, Search, Sparkles, Swords } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { CommandPalette, useCommandPaletteShortcut } from '@/components/CommandPalette';
 import { Footer } from '@/components/Footer';
@@ -11,6 +11,7 @@ import { useSessionToasts } from '@/hooks/useSessionToasts';
 import { api, logout } from '@/lib/api';
 import { Link, matchRoute, usePathname } from '@/lib/router';
 import { cn } from '@/lib/utils';
+import { Challenges } from '@/pages/Challenges';
 import { Duel } from '@/pages/Duel';
 import { GameDetail } from '@/pages/GameDetail';
 import { Library } from '@/pages/Library';
@@ -20,6 +21,7 @@ import { Wrapped } from '@/pages/Wrapped';
 const NAV = [
   { to: '/', label: 'Wrapped', icon: Sparkles, pages: ['wrapped'] },
   { to: '/jeux', label: 'Mes jeux', icon: LibraryBig, pages: ['library', 'game'] },
+  { to: '/defis', label: 'Défis', icon: Swords, pages: ['challenges', 'duel', 'public'] },
 ];
 
 function Header({ user, page, onSearch }) {
@@ -54,7 +56,8 @@ function Header({ user, page, onSearch }) {
                   />
                 )}
                 <Icon className="relative size-3.5 sm:size-4" />
-                <span className="relative">{label}</span>
+                {/* Sur très petit écran, seul l'onglet actif garde son libellé. */}
+                <span className={cn('relative', !active && 'hidden min-[480px]:inline')}>{label}</span>
               </Link>
             );
           })}
@@ -92,7 +95,7 @@ function NotFound() {
   );
 }
 
-const TITLES = { wrapped: 'PlayTrace', library: 'Mes jeux · PlayTrace', notfound: 'Introuvable · PlayTrace' };
+const TITLES = { wrapped: 'PlayTrace', library: 'Mes jeux · PlayTrace', challenges: 'Défis · PlayTrace', notfound: 'Introuvable · PlayTrace' };
 
 function Shell({ user }) {
   const pathname = usePathname();
@@ -100,6 +103,7 @@ function Shell({ user }) {
   // Un seul flux live pour toute l'app : il survit aux changements de page.
   const live = useLiveStatus();
   useSessionToasts(live.status);
+  const [isPublic, setIsPublic] = useState(Boolean(user.publicProfile));
   const [searchOpen, setSearchOpen] = useState(false);
   useCommandPaletteShortcut(setSearchOpen);
 
@@ -120,7 +124,8 @@ function Shell({ user }) {
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.25, ease: 'easeOut' }}
           >
-            {route.page === 'wrapped' && <Wrapped user={user} live={live} />}
+            {route.page === 'wrapped' && <Wrapped user={user} live={live} isPublic={isPublic} onPublicChange={setIsPublic} />}
+            {route.page === 'challenges' && <Challenges user={user} isPublic={isPublic} onPublicChange={setIsPublic} />}
             {route.page === 'library' && <Library live={live} />}
             {route.page === 'game' && <GameDetail appid={route.appid} live={live} />}
             {route.page === 'public' && <PublicProfile steamid={route.steamid} viewer={user} />}
