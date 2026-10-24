@@ -72,9 +72,20 @@ PlayTrace détecte le jeu en cours sur ton compte Steam, enregistre chaque sessi
 
 ### Bonus
 - 🔥 Heatmap d'activité par jour et par heure
-- 🧬 Répartition par genre
-- 🖼️ Export du Wrapped en image
+- 🧬 Répartition par genre *(à venir)*
+- 🖼️ Export du Wrapped en image (format story 1080 × 1920)
 - ⚔️ Duel de profils entre amis, avec score de compatibilité
+
+### Et aussi
+- 🎬 **Mode Story** : le Wrapped raconté en slides plein écran, façon stories
+- 🧠 **Profil de joueur** : personnalité, séries de jours, 10 badges PlayTrace à débloquer
+- 📅 **Calendrier** de l'année, jour par jour, et **sélecteur d'année**
+- 🏆 **Fiche de chaque jeu** : succès obtenus / manquants, rareté mondiale, succès « à portée de main », courbe de progression
+- 📚 **Mes jeux** : toute la bibliothèque, recherche, tris et % de succès par jeu
+- ⌨️ **Recherche rapide** `Ctrl + K`
+- 🔔 **Notifications** de début et de fin de session (toast + notification du navigateur)
+- 🌍 **Profil public** optionnel (désactivé par défaut), partageable par lien
+- 📱 **Application installable** (PWA), utilisable hors ligne pour la coquille de l'app
 
 ---
 
@@ -286,9 +297,10 @@ playtrace/
 - [x] Route SSE
 - [x] Front React : dashboard et bandeau live
 - [x] Animations et effets (Motion + bibliothèques UI)
-- [ ] Stats avancées : heatmap, genres
-- [ ] Sécurisation et déploiement
-- [ ] Export image et duel entre amis
+- [x] Stats avancées : heatmap, calendrier, profil de joueur
+- [x] Sécurisation et déploiement (Vercel + Supabase)
+- [x] Export image et duel entre amis
+- [ ] Répartition par genre
 
 ---
 
