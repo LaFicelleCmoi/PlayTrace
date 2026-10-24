@@ -184,6 +184,17 @@ flowchart LR
 - 🛡️ En-têtes de sécurité : **CSP** stricte, `X-Frame-Options`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`, HSTS.
 - 🚦 **Limitation de requêtes** par IP, jetons secrets pour le cron et l'agent (comparés en temps constant).
 - 🌍 **Profil public désactivé par défaut.** Activé, il ne montre que des agrégats (heures, top 5, personnalité, badges, calendrier) : **jamais** le détail ni les horaires des sessions, la partie en cours ou les téléchargements.
+- 🔁 **Sessions de 14 jours, révocables** (« Se déconnecter de tous les appareils ») ; la suppression du compte exige une connexion Steam de moins de 15 minutes : un cookie volé par un malware ne suffit pas.
+- 📦 **Chaîne d'approvisionnement** : versions figées, scripts d'installation npm désactivés (`.npmrc`), alertes Dependabot.
+- 🎣 **Anti-phishing** : la connexion se fait toujours sur `steamcommunity.com`, PlayTrace ne demande jamais de mot de passe.
+- 📮 Failles à signaler via [`/.well-known/security.txt`](public/.well-known/security.txt).
+
+### RGPD
+
+- **Droits en libre-service** sur la page *Mon compte* : export de toutes les données (JSON), **pause du suivi**, retrait du profil public, **suppression immédiate** du compte.
+- **Purge automatique** des comptes sans connexion depuis 12 mois (`pg_cron`, chaque nuit).
+- Aucun traceur, aucune publicité, aucun cookie hors stricts nécessaires : pas de bandeau à imposer.
+- Base hébergée à **Paris** ; [politique de confidentialité](https://play-trace-nine.vercel.app/confidentialite) et [mentions légales](https://play-trace-nine.vercel.app/mentions-legales) en ligne.
 
 > ⚠️ La minification ralentit l'inspection du code client mais ne le protège pas : tout ce qui arrive dans le navigateur est lisible. **Seul ce qui reste sur le serveur est réellement protégé.**
 
