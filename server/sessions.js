@@ -1,41 +1,43 @@
-import { db, transaction } from './db.js';
+import { sql } from './db.js';
 
-const OPEN_SESSION_SQL = `
-  SELECT id, steamid64, appid, game_name, started_at, last_seen_at
-  FROM sessions WHERE steamid64 = ? AND ended_at IS NULL
-`;
-
-export function getOpenSession(steamid) {
-  return db.prepare(OPEN_SESSION_SQL).get(steamid);
+async function getOpenSession(steamid, db = sql) {
+  const [open] = await db`
+    SELECT id, steamid64, appid, game_name, started_at, last_seen_at
+    FROM playtrace.sessions WHERE steamid64 = ${steamid} AND ended_at IS NULL
+  `;
+  return open ?? null;
 }
 
-function openSession(steamid, game, iso) {
-  const { lastInsertRowid } = db.prepare(`
-    INSERT INTO sessions (steamid64, appid, game_name, started_at, last_seen_at) VALUES (?, ?, ?, ?, ?)
-  `).run(steamid, game.appid, game.name, iso, iso);
-  return { id: Number(lastInsertRowid), steamid64: steamid, appid: game.appid, game_name: game.name, started_at: iso };
+async function openSession(db, steamid, game, now) {
+  // Deux sondages simultanés (cron + connexion) ne doivent pas ouvrir deux sessions : l'index unique tranche.
+  const [started] = await db`
+    INSERT INTO playtrace.sessions (steamid64, appid, game_name, started_at, last_seen_at)
+    VALUES (${steamid}, ${game.appid}, ${game.name}, ${now}, ${now})
+    ON CONFLICT (steamid64) WHERE ended_at IS NULL DO NOTHING
+    RETURNING id, steamid64, appid, game_name, started_at
+  `;
+  return started ?? null;
 }
 
-function closeSession(session, endIso) {
-  const duration = Math.max(0, Math.round((Date.parse(endIso) - Date.parse(session.started_at)) / 1000));
-  db.prepare('UPDATE sessions SET ended_at = ?, duration_s = ? WHERE id = ?').run(endIso, duration, session.id);
-  return { ...session, ended_at: endIso, duration_s: duration };
+async function closeSession(db, session, end) {
+  const duration = Math.max(0, Math.round((end.getTime() - new Date(session.started_at).getTime()) / 1000));
+  await db`UPDATE playtrace.sessions SET ended_at = ${end}, duration_s = ${duration} WHERE id = ${session.id}`;
+  return { ...session, ended_at: end, duration_s: duration };
 }
 
 /**
  * Applique un résultat de sondage : `game` vaut `{ appid, name }` ou `null` si le joueur ne joue pas.
  * Ferme la session ouverte si le jeu a changé et en ouvre une nouvelle si besoin.
  */
-export function recordPresence(steamid, game, now = new Date()) {
-  const iso = now.toISOString();
-  return transaction(() => {
-    const open = getOpenSession(steamid);
+export async function recordPresence(steamid, game, now = new Date()) {
+  return sql.begin(async (tx) => {
+    const open = await getOpenSession(steamid, tx);
     if (open && game && open.appid === game.appid) {
-      db.prepare('UPDATE sessions SET last_seen_at = ? WHERE id = ?').run(iso, open.id);
+      await tx`UPDATE playtrace.sessions SET last_seen_at = ${now} WHERE id = ${open.id}`;
       return { changed: false, ended: null, started: null };
     }
-    const ended = open ? closeSession(open, iso) : null;
-    const started = game ? openSession(steamid, game, iso) : null;
+    const ended = open ? await closeSession(tx, open, now) : null;
+    const started = game ? await openSession(tx, steamid, game, now) : null;
     return { changed: Boolean(ended || started), ended, started };
   });
 }
@@ -44,23 +46,23 @@ export function recordPresence(steamid, game, now = new Date()) {
  * Ferme les sessions que plus aucun sondage n'a confirmées depuis `maxAgeMs`
  * (serveur arrêté, profil passé en privé…). La fin retenue est le dernier sondage positif.
  */
-export function closeStaleSessions(maxAgeMs, now = new Date()) {
-  const limit = new Date(now.getTime() - maxAgeMs).toISOString();
-  return transaction(() => {
-    const stale = db.prepare(`
-      SELECT id, steamid64, appid, game_name, started_at, last_seen_at
-      FROM sessions WHERE ended_at IS NULL AND last_seen_at < ?
-    `).all(limit);
-    return stale.map((session) => closeSession(session, session.last_seen_at));
-  });
+export async function closeStaleSessions(maxAgeMs, now = new Date()) {
+  const limit = new Date(now.getTime() - maxAgeMs);
+  return sql`
+    UPDATE playtrace.sessions
+    SET ended_at = last_seen_at,
+        duration_s = GREATEST(0, ROUND(EXTRACT(EPOCH FROM last_seen_at - started_at)))::int
+    WHERE ended_at IS NULL AND last_seen_at < ${limit}
+    RETURNING steamid64
+  `;
 }
 
 /** État diffusé en direct au front. */
-export function getLiveStatus(steamid) {
-  const open = getOpenSession(steamid);
+export async function getLiveStatus(steamid) {
+  const open = await getOpenSession(steamid);
   return {
     playing: Boolean(open),
-    sessionId: open?.id ?? null,
+    sessionId: open ? Number(open.id) : null,
     appid: open?.appid ?? null,
     gameName: open?.game_name ?? null,
     startedAt: open?.started_at ?? null,
@@ -68,9 +70,10 @@ export function getLiveStatus(steamid) {
   };
 }
 
-export function getRecentSessions(steamid, limit) {
-  return db.prepare(`
+export async function getRecentSessions(steamid, limit) {
+  const rows = await sql`
     SELECT id, appid, game_name, started_at, ended_at, duration_s
-    FROM sessions WHERE steamid64 = ? ORDER BY started_at DESC LIMIT ?
-  `).all(steamid, limit).map((row) => ({ ...row, live: row.ended_at === null }));
+    FROM playtrace.sessions WHERE steamid64 = ${steamid} ORDER BY started_at DESC LIMIT ${limit}
+  `;
+  return rows.map((row) => ({ ...row, id: Number(row.id), live: row.ended_at === null }));
 }
