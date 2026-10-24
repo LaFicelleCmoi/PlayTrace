@@ -11,8 +11,10 @@ import { useSessionToasts } from '@/hooks/useSessionToasts';
 import { api, logout } from '@/lib/api';
 import { Link, matchRoute, usePathname } from '@/lib/router';
 import { cn } from '@/lib/utils';
+import { Duel } from '@/pages/Duel';
 import { GameDetail } from '@/pages/GameDetail';
 import { Library } from '@/pages/Library';
+import { PublicProfile } from '@/pages/PublicProfile';
 import { Wrapped } from '@/pages/Wrapped';
 
 const NAV = [
@@ -121,6 +123,8 @@ function Shell({ user }) {
             {route.page === 'wrapped' && <Wrapped user={user} live={live} />}
             {route.page === 'library' && <Library live={live} />}
             {route.page === 'game' && <GameDetail appid={route.appid} live={live} />}
+            {route.page === 'public' && <PublicProfile steamid={route.steamid} viewer={user} />}
+            {route.page === 'duel' && <Duel steamid={route.steamid} />}
             {route.page === 'notfound' && <NotFound />}
           </motion.div>
         </AnimatePresence>
@@ -131,14 +135,38 @@ function Shell({ user }) {
   );
 }
 
+/** Profil public consulté sans être connecté : en-tête minimal et invitation à créer son Wrapped. */
+function PublicLayout({ steamid }) {
+  return (
+    <>
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-white/5 bg-background/60 pt-[env(safe-area-inset-top)] backdrop-blur-lg">
+        <div className="container flex h-14 items-center justify-between">
+          <a href="/" className="flex items-center gap-2 font-bold">
+            <img src="/favicon.svg" alt="" className="size-6" />
+            <span>
+              Play<span className="text-gradient">Trace</span>
+            </span>
+          </a>
+          <a href="/auth/steam" className={buttonVariants({ size: 'sm', variant: 'outline' })}>Se connecter</a>
+        </div>
+      </header>
+      <main className="min-h-dvh pt-[calc(3.5rem+env(safe-area-inset-top))]">
+        <PublicProfile steamid={steamid} viewer={null} />
+      </main>
+      <Footer />
+    </>
+  );
+}
+
 export default function App() {
   const [user, setUser] = useState(undefined);
+  const route = matchRoute(usePathname());
 
   useEffect(() => {
     api.me().then(setUser).catch(() => setUser(null));
   }, []);
 
   if (user === undefined) return <div className="min-h-dvh" />;
-  if (!user) return <Login />;
+  if (!user) return route.page === 'public' ? <PublicLayout steamid={route.steamid} /> : <Login />;
   return <Shell user={user} />;
 }
