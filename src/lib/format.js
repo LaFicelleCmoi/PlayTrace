@@ -1,9 +1,9 @@
-const STEAM_CDN = 'https://cdn.cloudflare.steamstatic.com/steam/apps';
-
-/** Visuels Steam d'un jeu : `header` (paysage), `capsule` (jaquette), `hero` (bannière). */
+/**
+ * Visuels Steam d'un jeu : `header` (paysage), `capsule` (jaquette), `hero` (bannière).
+ * Le serveur redirige vers la bonne URL du CDN (les jeux récents ont des chemins avec hash).
+ */
 export function gameArt(appid, kind = 'header') {
-  const file = { header: 'header.jpg', capsule: 'library_600x900.jpg', hero: 'library_hero.jpg' }[kind];
-  return `${STEAM_CDN}/${appid}/${file}`;
+  return `/api/art/${appid}/${kind}`;
 }
 
 const number = new Intl.NumberFormat('fr-FR');
@@ -54,4 +54,23 @@ export function formatBytes(bytes) {
 
 export function formatSpeed(bytesPerSecond) {
   return `${formatBytes(bytesPerSecond)}/s`;
+}
+
+const relative = new Intl.RelativeTimeFormat('fr-FR', { numeric: 'auto' });
+const RELATIVE_STEPS = [
+  ['year', 365 * 24 * 3600],
+  ['month', 30 * 24 * 3600],
+  ['week', 7 * 24 * 3600],
+  ['day', 24 * 3600],
+  ['hour', 3600],
+  ['minute', 60],
+];
+
+/** « il y a 3 jours », « hier »… */
+export function formatRelative(iso) {
+  const seconds = (new Date(iso).getTime() - Date.now()) / 1000;
+  for (const [unit, size] of RELATIVE_STEPS) {
+    if (Math.abs(seconds) >= size) return relative.format(Math.round(seconds / size), unit);
+  }
+  return 'à l’instant';
 }
