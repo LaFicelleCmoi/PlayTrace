@@ -1,0 +1,12 @@
+# Alertes et correctifs de sécurité automatiques pour les dépendances npm.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      dev-tools:
+        dependency-type: development
