@@ -11,6 +11,7 @@ import {
   verifyLogin,
 } from './auth.js';
 import { getDownloads, saveDownloads } from './downloads.js';
+import { ART_KINDS, getArtUrl, getGameDetail, getLibraryGames } from './games.js';
 import { ensureLibrary, getLibrarySummary } from './library.js';
 import { pollOnce } from './poller.js';
 import { applySecurityHeaders, clientIp, createRateLimiter, isSameOrigin } from './security.js';
@@ -23,6 +24,8 @@ import { getUser, upsertUser } from './users.js';
 
 const apiLimiter = createRateLimiter({ windowMs: 60_000, max: 120 });
 const authLimiter = createRateLimiter({ windowMs: 60_000, max: 20 });
+// Une grille de jaquettes déclenche des dizaines de requêtes d'images d'un coup.
+const artLimiter = createRateLimiter({ windowMs: 60_000, max: 600 });
 const MAX_AGENT_BODY = 64 * 1024;
 const DOWNLOAD_STATES = new Set(['downloading', 'installing', 'paused', 'queued']);
 
@@ -124,6 +127,12 @@ const routes = {
     sendJson(res, 200, { sessions: await getRecentSessions(user.steamid64, limit) });
   },
 
+  'GET /api/games': async (req, res) => {
+    const user = await requireUser(req, res);
+    if (!user) return;
+    sendJson(res, 200, { games: await getLibraryGames(user.steamid64) });
+  },
+
   'GET /api/live': async (req, res) => {
     const user = await requireUser(req, res);
     if (!user) return;
@@ -181,6 +190,47 @@ const routes = {
   },
 };
 
+// Routes à paramètre : [méthode, motif, gestionnaire(req, res, url, ...captures)].
+const patternRoutes = [
+  [
+    'GET',
+    /^\/api\/art\/(\d{1,10})\/([a-z]+)$/,
+    async (req, res, url, rawAppid, kind) => {
+      const appid = Number(rawAppid);
+      if (appid < 1 || appid > 0x7fffffff || !ART_KINDS.includes(kind)) return sendJson(res, 404, { error: 'Introuvable' });
+      // Données publiques : le navigateur et le CDN de Vercel gardent la redirection en cache.
+      res.writeHead(302, {
+        Location: await getArtUrl(appid, kind),
+        'Cache-Control': 'public, max-age=86400, s-maxage=604800',
+      });
+      res.end();
+    },
+  ],
+  [
+    'GET',
+    /^\/api\/games\/(\d{1,10})$/,
+    async (req, res, url, rawAppid) => {
+      const user = await requireUser(req, res);
+      if (!user) return;
+      const appid = Number(rawAppid);
+      if (appid < 1 || appid > 0x7fffffff) return sendJson(res, 400, { error: 'Jeu invalide' });
+      const game = await getGameDetail(user.steamid64, appid);
+      if (!game) return sendJson(res, 404, { error: 'Jeu introuvable' });
+      sendJson(res, 200, game);
+    },
+  ],
+];
+
+function findRoute(method, pathname) {
+  const exact = routes[`${method} ${pathname}`];
+  if (exact) return exact;
+  for (const [routeMethod, pattern, routeHandler] of patternRoutes) {
+    const match = routeMethod === method && pattern.exec(pathname);
+    if (match) return (req, res, url) => routeHandler(req, res, url, ...match.slice(1));
+  }
+  return null;
+}
+
 /** Chemin demandé ; sur Vercel, les rewrites de vercel.json le transmettent dans `__path`. */
 function requestUrl(req) {
   const url = new URL(req.url ?? '/', 'http://localhost');
@@ -198,12 +248,13 @@ async function handle(req, res) {
   const isAuth = url.pathname.startsWith('/auth/');
 
   if (url.pathname.startsWith('/api/') || isAuth) {
-    const allowed = (isAuth ? authLimiter : apiLimiter).hit(clientIp(req));
+    const limiter = isAuth ? authLimiter : url.pathname.startsWith('/api/art/') ? artLimiter : apiLimiter;
+    const allowed = limiter.hit(clientIp(req));
     if (allowed !== true) {
       res.setHeader('Retry-After', String(allowed));
       return sendJson(res, 429, { error: 'Trop de requêtes, réessaie dans un instant' });
     }
-    const route = routes[`${req.method} ${url.pathname}`];
+    const route = findRoute(req.method, url.pathname);
     if (!route) return sendJson(res, 404, { error: 'Introuvable' });
     return route(req, res, url);
   }
