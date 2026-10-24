@@ -1,3 +1,5 @@
+import { useMemo, useState } from 'react';
+import { AnimatePresence } from 'motion/react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DownloadsPanel } from '@/components/DownloadsPanel';
@@ -6,10 +8,15 @@ import { GamesMarquee } from '@/components/GamesMarquee';
 import { Heatmap } from '@/components/Heatmap';
 import { Hero } from '@/components/Hero';
 import { LiveBanner } from '@/components/LiveBanner';
+import { PlayerProfile } from '@/components/PlayerProfile';
 import { SessionTimeline } from '@/components/SessionTimeline';
 import { TopGames } from '@/components/TopGames';
+import { WrappedStory } from '@/components/WrappedStory';
+import { YearCalendar } from '@/components/YearCalendar';
 import { useNow } from '@/hooks/useNow';
 import { useStats } from '@/hooks/useStats';
+import { computeInsights } from '@/lib/insights';
+import { renderWrappedImage, shareOrDownload } from '@/lib/shareImage';
 
 const YEAR = new Date().getFullYear();
 
@@ -19,6 +26,18 @@ export function Wrapped({ user, live }) {
   const { stats, sessions, error, reload } = useStats(YEAR, `${status?.sessionId}-${status?.playing}`);
   const playing = Boolean(status?.playing);
   const now = useNow(playing);
+  const insights = useMemo(() => (stats ? computeInsights(stats) : null), [stats]);
+  const [storyOpen, setStoryOpen] = useState(false);
+  const [sharing, setSharing] = useState(false);
+
+  async function share() {
+    setSharing(true);
+    try {
+      await shareOrDownload(await renderWrappedImage({ user, stats, insights }), stats.year);
+    } finally {
+      setSharing(false);
+    }
+  }
 
   if (error) {
     return (
@@ -45,14 +64,26 @@ export function Wrapped({ user, live }) {
 
   return (
     <>
-      <Hero user={user} stats={stats} trackedSeconds={trackedSeconds} />
+      <Hero
+        user={user}
+        stats={stats}
+        trackedSeconds={trackedSeconds}
+        onPlay={() => setStoryOpen(true)}
+        onShare={share}
+        sharing={sharing}
+      />
       <LiveBanner status={status} connection={connection} />
       <DownloadsPanel downloads={downloads} />
       <GamesMarquee stats={stats} />
       <TopGames stats={stats} />
       <GameOfTheYear stats={stats} />
+      <PlayerProfile insights={insights} />
+      <YearCalendar year={stats.year} daily={stats.daily} trackingSince={stats.trackingSince} />
       <Heatmap heatmap={stats.heatmap} />
       <SessionTimeline sessions={sessions} />
+      <AnimatePresence>
+        {storyOpen && <WrappedStory user={user} stats={stats} insights={insights} onClose={() => setStoryOpen(false)} />}
+      </AnimatePresence>
     </>
   );
 }
