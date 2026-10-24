@@ -5,6 +5,9 @@ import { getAchievementRarity, getAchievementSchema, getPlayerAchievements, getS
 const DAY_MS = 24 * 60 * 60 * 1000;
 const CACHE_TTL_MS = { store: 7 * DAY_MS, schema: 7 * DAY_MS, rarity: DAY_MS, assets: 7 * DAY_MS };
 const ASSETS_BATCH = 100;
+const PROGRESS_TTL_MS = 6 * 60 * 60 * 1000;
+const PROGRESS_BATCH = 40;
+const PROGRESS_CONCURRENCY = 8;
 const ART_CDN = 'https://shared.akamai.steamstatic.com/store_item_assets/';
 const LEGACY_ART = { capsule: 'library_600x900.jpg', header: 'header.jpg', hero: 'library_hero.jpg' };
 export const ART_KINDS = Object.keys(LEGACY_ART);
@@ -90,6 +93,71 @@ function mergeAchievements(schema, rarity, player) {
   return { status, total: items.length, unlocked: items.filter((item) => item.achieved).length, items };
 }
 
+async function saveProgress(steamid, appid, unlocked, total) {
+  await sql`
+    INSERT INTO playtrace.achievement_progress (steamid64, appid, unlocked, total, fetched_at)
+    VALUES (${steamid}, ${appid}, ${unlocked}, ${total}, now())
+    ON CONFLICT (steamid64, appid) DO UPDATE
+      SET unlocked = excluded.unlocked, total = excluded.total, fetched_at = excluded.fetched_at
+  `;
+}
+
+/** Exécute `task` sur chaque élément, `limit` à la fois (pour ne pas bombarder l'API Steam). */
+async function pool(items, limit, task) {
+  const queue = [...items];
+  await Promise.all(
+    Array.from({ length: Math.min(limit, queue.length) }, async () => {
+      while (queue.length) await task(queue.shift());
+    }),
+  );
+}
+
+/**
+ * Progression des succès de toute la bibliothèque. Les jeux jamais lancés sont ignorés
+ * (0 succès par définition) ; au plus 40 jeux sont rafraîchis par appel, `pending` dit combien il en reste.
+ */
+export async function getAchievementProgress(steamid) {
+  const [played, cached] = await Promise.all([
+    sql`
+      SELECT appid FROM playtrace.owned_games WHERE steamid64 = ${steamid} AND playtime_minutes > 0
+      UNION SELECT DISTINCT appid FROM playtrace.sessions WHERE steamid64 = ${steamid}
+    `,
+    sql`SELECT appid, unlocked, total, fetched_at FROM playtrace.achievement_progress WHERE steamid64 = ${steamid}`,
+  ]);
+  const byApp = new Map(cached.map((row) => [row.appid, row]));
+  const stale = played
+    .map((row) => row.appid)
+    .filter((appid) => {
+      const row = byApp.get(appid);
+      return !row || Date.now() - new Date(row.fetched_at).getTime() > PROGRESS_TTL_MS;
+    });
+
+  let isPrivate = false;
+  await pool(stale.slice(0, PROGRESS_BATCH), PROGRESS_CONCURRENCY, async (appid) => {
+    if (isPrivate) return;
+    try {
+      const result = await getPlayerAchievements(steamid, appid);
+      if (result.error === 'private') {
+        isPrivate = true;
+        return;
+      }
+      const list = result.achievements ?? [];
+      const unlocked = list.filter((achievement) => achievement.achieved === 1).length;
+      await saveProgress(steamid, appid, unlocked, list.length);
+      byApp.set(appid, { appid, unlocked, total: list.length });
+    } catch (error) {
+      console.error(`[games] progression ${appid} :`, error.message);
+    }
+  });
+
+  if (isPrivate) return { status: 'private', progress: {}, pending: 0 };
+  const progress = {};
+  for (const row of byApp.values()) {
+    if (row.total > 0) progress[row.appid] = { unlocked: row.unlocked, total: row.total };
+  }
+  return { status: 'ok', progress, pending: Math.max(0, stale.length - PROGRESS_BATCH) };
+}
+
 /** Met en cache, en une requête par lot de 100, les visuels des jeux qui ne le sont pas encore. */
 export async function ensureArt(appids) {
   if (appids.length === 0) return;
@@ -157,6 +225,10 @@ export async function getGameDetail(steamid, appid) {
 
   const achievements = mergeAchievements(schema ?? [], rarity, player);
   if (player.error === 'unavailable' && achievements.status === 'ok') achievements.status = 'unavailable';
+  // La fiche vient de lire les succès à jour : la bibliothèque en profite.
+  if (achievements.status === 'ok' && owned) {
+    await saveProgress(steamid, appid, achievements.unlocked, achievements.total).catch(() => {});
+  }
 
   return {
     appid,
