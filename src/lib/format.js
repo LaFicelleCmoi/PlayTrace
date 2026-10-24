@@ -38,3 +38,20 @@ export function formatDate(iso, options = { day: 'numeric', month: 'long', year:
 export function formatDateTime(iso) {
   return new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso));
 }
+
+const BYTE_UNITS = ['o', 'Ko', 'Mo', 'Go', 'To'];
+
+/** 1536 → « 1,5 Ko ». */
+export function formatBytes(bytes) {
+  let value = Math.max(0, bytes);
+  let unit = 0;
+  while (value >= 1024 && unit < BYTE_UNITS.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+  return `${formatNumber(value, unit === 0 || value >= 100 ? 0 : 1)} ${BYTE_UNITS[unit]}`;
+}
+
+export function formatSpeed(bytesPerSecond) {
+  return `${formatBytes(bytesPerSecond)}/s`;
+}
