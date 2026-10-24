@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { CornerDownLeft, LibraryBig, Search, Sparkles, Swords } from 'lucide-react';
+import { CornerDownLeft, LibraryBig, Search, Sparkles, Swords, UserCog } from 'lucide-react';
 import { GameImage } from '@/components/GameImage';
 import { request } from '@/lib/api';
 import { formatDuration } from '@/lib/format';
@@ -11,6 +11,7 @@ const PAGES = [
   { id: 'page-wrapped', label: 'Wrapped', hint: 'Ton année sur Steam', icon: Sparkles, to: '/' },
   { id: 'page-library', label: 'Mes jeux', hint: 'Toute ta bibliothèque', icon: LibraryBig, to: '/jeux' },
   { id: 'page-challenges', label: 'Défis', hint: 'Profil public et duels entre amis', icon: Swords, to: '/defis' },
+  { id: 'page-account', label: 'Mon compte', hint: 'Pause du suivi, export et suppression des données', icon: UserCog, to: '/compte' },
 ];
 
 function normalize(value) {
