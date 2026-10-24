@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { Gamepad2, LibraryBig, LogOut, Sparkles } from 'lucide-react';
+import { Gamepad2, LibraryBig, LogOut, Search, Sparkles } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
+import { CommandPalette, useCommandPaletteShortcut } from '@/components/CommandPalette';
 import { Footer } from '@/components/Footer';
 import { Login } from '@/components/Login';
+import { Toaster } from '@/components/Toaster';
 import { useLiveStatus } from '@/hooks/useLiveStatus';
+import { useSessionToasts } from '@/hooks/useSessionToasts';
 import { api, logout } from '@/lib/api';
 import { Link, matchRoute, usePathname } from '@/lib/router';
 import { cn } from '@/lib/utils';
@@ -17,7 +20,7 @@ const NAV = [
   { to: '/jeux', label: 'Mes jeux', icon: LibraryBig, pages: ['library', 'game'] },
 ];
 
-function Header({ user, page }) {
+function Header({ user, page, onSearch }) {
   return (
     <header className="fixed inset-x-0 top-0 z-50 border-b border-white/5 bg-background/60 pt-[env(safe-area-inset-top)] backdrop-blur-lg">
       <div className="container flex h-14 items-center justify-between gap-2 sm:gap-3">
@@ -55,7 +58,17 @@ function Header({ user, page }) {
           })}
         </nav>
 
-        <div className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-3">
+        <div className="flex min-w-0 shrink-0 items-center gap-1.5 sm:gap-3">
+          <button
+            type="button"
+            onClick={onSearch}
+            aria-label="Rechercher un jeu"
+            className="flex items-center gap-2 rounded-full border bg-card/60 p-2 text-sm text-muted-foreground transition-colors hover:border-neon-violet/50 hover:text-foreground lg:px-3 lg:py-1.5"
+          >
+            <Search className="size-4" />
+            <span className="hidden lg:inline">Rechercher</span>
+            <kbd className="hidden rounded border px-1.5 text-[10px] lg:inline">Ctrl K</kbd>
+          </button>
           {user.avatar && <img src={user.avatar} alt="" className="hidden size-8 shrink-0 rounded-full border min-[480px]:block" referrerPolicy="no-referrer" />}
           <span className="hidden max-w-[10rem] truncate text-sm lg:inline">{user.pseudo}</span>
           <Button variant="ghost" size="icon" onClick={logout} aria-label="Se déconnecter">
@@ -84,6 +97,9 @@ function Shell({ user }) {
   const route = matchRoute(pathname);
   // Un seul flux live pour toute l'app : il survit aux changements de page.
   const live = useLiveStatus();
+  useSessionToasts(live.status);
+  const [searchOpen, setSearchOpen] = useState(false);
+  useCommandPaletteShortcut(setSearchOpen);
 
   useEffect(() => {
     if (TITLES[route.page]) document.title = TITLES[route.page];
@@ -91,7 +107,8 @@ function Shell({ user }) {
 
   return (
     <>
-      <Header user={user} page={route.page} />
+      <Header user={user} page={route.page} onSearch={() => setSearchOpen(true)} />
+      <CommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
       <main className="min-h-dvh pt-[calc(3.5rem+env(safe-area-inset-top))]">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
@@ -109,6 +126,7 @@ function Shell({ user }) {
         </AnimatePresence>
       </main>
       <Footer user={user} live={live} />
+      <Toaster />
     </>
   );
 }
