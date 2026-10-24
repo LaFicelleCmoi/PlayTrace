@@ -58,3 +58,13 @@ CREATE TABLE IF NOT EXISTS playtrace.game_cache (
   fetched_at TIMESTAMPTZ NOT NULL,
   PRIMARY KEY (appid, kind)
 );
+
+-- Progression des succès par jeu (cache de GetPlayerAchievements pour la bibliothèque).
+CREATE TABLE IF NOT EXISTS playtrace.achievement_progress (
+  steamid64  TEXT NOT NULL REFERENCES playtrace.users (steamid64) ON DELETE CASCADE,
+  appid      INTEGER NOT NULL,
+  unlocked   INTEGER NOT NULL,
+  total      INTEGER NOT NULL,
+  fetched_at TIMESTAMPTZ NOT NULL,
+  PRIMARY KEY (steamid64, appid)
+);
