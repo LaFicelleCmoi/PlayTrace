@@ -1,0 +1,186 @@
+import { motion } from 'motion/react';
+import { ArrowUp, ArrowUpRight, Gamepad2, LibraryBig, LogOut, Radio, ShieldCheck, Sparkles, UserRound } from 'lucide-react';
+import { TextHoverEffect } from '@/components/ui/text-hover-effect';
+import { logout } from '@/lib/api';
+import { Link } from '@/lib/router';
+import { cn } from '@/lib/utils';
+
+const STACK = ['React', 'Motion', 'Tailwind', 'Node.js', 'Supabase', 'Vercel', 'API Steam'];
+const linkClass = 'group inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground';
+
+function FooterLink({ to, href, icon: Icon, children }) {
+  const content = (
+    <>
+      <Icon className="size-4 shrink-0 transition-colors group-hover:text-neon-cyan" />
+      <span>{children}</span>
+      {href && <ArrowUpRight className="size-3 opacity-0 transition-opacity group-hover:opacity-100" />}
+    </>
+  );
+  if (to) {
+    return (
+      <Link to={to} className={linkClass}>
+        {content}
+      </Link>
+    );
+  }
+  return (
+    <a href={href} target="_blank" rel="noreferrer noopener" className={linkClass}>
+      {content}
+    </a>
+  );
+}
+
+function Column({ title, children }) {
+  return (
+    <div>
+      <p className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-foreground/70">{title}</p>
+      <ul className="grid gap-3">{children}</ul>
+    </div>
+  );
+}
+
+/** État du suivi en direct : jeu en cours, suivi actif, ou connexion perdue. */
+function LiveChip({ live }) {
+  const playing = live.status?.playing;
+  const lost = live.connection === 'closed';
+  const dot = playing ? 'bg-neon-red' : lost ? 'bg-muted-foreground' : 'bg-neon-lime';
+
+  const content = (
+    <>
+      <span className="relative flex size-2.5 shrink-0">
+        {!lost && <span className={cn('absolute inline-flex h-full w-full animate-pulse-ring rounded-full', dot)} />}
+        <span className={cn('relative inline-flex size-2.5 rounded-full', dot)} />
+      </span>
+      <span className="truncate">
+        {playing ? (
+          <>
+            En jeu · <strong className="font-semibold text-foreground">{live.status.gameName}</strong>
+          </>
+        ) : lost ? (
+          'Connexion au direct perdue'
+        ) : (
+          'Suivi actif · Steam est sondé chaque minute'
+        )}
+      </span>
+    </>
+  );
+
+  const className = 'inline-flex max-w-full items-center gap-2.5 rounded-full border bg-card/70 px-3.5 py-2 text-xs text-muted-foreground backdrop-blur sm:text-sm';
+  return playing ? (
+    <Link to={`/jeux/${live.status.appid}`} className={cn(className, 'border-neon-red/30 transition-colors hover:border-neon-red/60')}>
+      {content}
+    </Link>
+  ) : (
+    <div className={className}>{content}</div>
+  );
+}
+
+/** Pied de page : liens, état du suivi et logo géant interactif. */
+export function Footer({ user, live }) {
+  const year = new Date().getFullYear();
+
+  return (
+    <footer className="relative mt-10 overflow-hidden border-t border-white/5 sm:mt-16">
+      {/* Liseré et halo néon en haut du footer. */}
+      <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-neon-violet to-transparent" />
+      <div aria-hidden className="pointer-events-none absolute -top-32 left-1/2 h-64 w-[min(900px,90%)] -translate-x-1/2 rounded-full bg-neon-violet/15 blur-3xl" />
+      <div aria-hidden className="bg-grid pointer-events-none absolute inset-0 opacity-40 [mask-image:linear-gradient(to_bottom,black,transparent_70%)]" />
+
+      <div className="container relative pt-12 sm:pt-16">
+        <div className="grid gap-10 lg:grid-cols-[1.3fr_2fr] lg:gap-16">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="min-w-0"
+          >
+            <Link to="/" className="inline-flex items-center gap-2 text-lg font-bold">
+              <img src="/favicon.svg" alt="" className="size-7" />
+              <span>
+                Play<span className="text-gradient">Trace</span>
+              </span>
+            </Link>
+            <p className="mt-4 max-w-sm text-sm leading-relaxed text-muted-foreground">
+              Ton Steam Wrapped, mais en temps réel. Chaque partie est enregistrée pendant que tu joues, même onglet fermé.
+            </p>
+            {live && (
+              <div className="mt-6">
+                <LiveChip live={live} />
+              </div>
+            )}
+          </motion.div>
+
+          <div className="grid grid-cols-2 gap-8 sm:grid-cols-3">
+            <Column title="Explorer">
+              <li><FooterLink to="/" icon={Sparkles}>Wrapped</FooterLink></li>
+              <li><FooterLink to="/jeux" icon={LibraryBig}>Mes jeux</FooterLink></li>
+              {live?.status?.playing && (
+                <li><FooterLink to={`/jeux/${live.status.appid}`} icon={Radio}>Jeu en cours</FooterLink></li>
+              )}
+            </Column>
+
+            {user ? (
+              <Column title="Ton compte">
+                <li><FooterLink href={`https://steamcommunity.com/profiles/${user.steamid}`} icon={UserRound}>Profil Steam</FooterLink></li>
+                <li><FooterLink href="https://steamcommunity.com/my/edit/settings" icon={ShieldCheck}>Confidentialité</FooterLink></li>
+                <li>
+                  <button type="button" onClick={logout} className={linkClass}>
+                    <LogOut className="size-4 shrink-0 transition-colors group-hover:text-neon-pink" />
+                    Se déconnecter
+                  </button>
+                </li>
+              </Column>
+            ) : (
+              <Column title="Steam">
+                <li><FooterLink href="https://store.steampowered.com/" icon={Gamepad2}>Store Steam</FooterLink></li>
+                <li><FooterLink href="https://steamcommunity.com/my/edit/settings" icon={ShieldCheck}>Confidentialité</FooterLink></li>
+              </Column>
+            )}
+
+            <div className="col-span-2 sm:col-span-1">
+              <p className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-foreground/70">Sous le capot</p>
+              <ul className="flex flex-wrap gap-1.5">
+                {STACK.map((tech, index) => (
+                  <motion.li
+                    key={tech}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: index * 0.05 }}
+                    className="rounded-md border bg-card/70 px-2 py-1 text-xs text-muted-foreground transition-colors hover:border-neon-cyan/50 hover:text-foreground"
+                  >
+                    {tech}
+                  </motion.li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="relative mt-10 px-2 sm:mt-14 sm:px-4">
+        <TextHoverEffect text="PlayTrace" className="mx-auto block w-full max-w-[1400px] select-none" />
+      </div>
+
+      <div className="container relative border-t border-white/5 py-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+        <div className="flex flex-col items-center gap-4 text-center text-xs text-muted-foreground sm:flex-row sm:justify-between sm:text-left">
+          <div className="space-y-1">
+            <p>
+              © {year} PlayTrace · par <span className="text-foreground">LaFicelleCmoi</span>, fait avec ☕, du néon et beaucoup de parties de Steam.
+            </p>
+            <p className="text-muted-foreground/70">Projet indépendant, non affilié à Valve. Données fournies par l’API Web Steam.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="group inline-flex shrink-0 items-center gap-2 rounded-full border bg-card/70 px-4 py-2 text-foreground transition-colors hover:border-neon-violet/50"
+          >
+            Haut de page
+            <ArrowUp className="size-4 transition-transform group-hover:-translate-y-0.5" />
+          </button>
+        </div>
+      </div>
+    </footer>
+  );
+}
