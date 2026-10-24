@@ -16,7 +16,7 @@ async function currentGame(player) {
   const appid = Number(player.gameid);
   // Les jeux hors Steam ont un gameid 64 bits sans fiche Steam : on les ignore.
   if (!player.gameid || !Number.isSafeInteger(appid) || appid <= 0 || appid > 0x7fffffff) return null;
-  const name = player.gameextrainfo || (await getGameName(player.steamid, appid)) || `App ${appid}`;
+  const name = (player.gameextrainfo || (await getGameName(player.steamid, appid)) || `App ${appid}`).trim();
   return { appid, name };
 }
 
