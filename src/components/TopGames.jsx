@@ -9,7 +9,17 @@ import { Link } from '@/lib/router';
 
 const RANK_COLORS = ['text-neon-pink', 'text-neon-violet', 'text-neon-cyan', 'text-muted-foreground', 'text-muted-foreground'];
 
-export function TopGames({ stats }) {
+// Sur un profil public, les jeux ne mènent nulle part : la fiche d'un jeu est celle du visiteur.
+function GameLink({ appid, interactive, children }) {
+  if (!interactive) return <div className="rounded-xl">{children}</div>;
+  return (
+    <Link to={`/jeux/${appid}`} className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      {children}
+    </Link>
+  );
+}
+
+export function TopGames({ stats, interactive = true, title = 'Tes jeux les plus joués' }) {
   // Tant que le suivi n'a rien enregistré, on montre le temps total de la bibliothèque Steam.
   const fromLibrary = stats.topGames.length === 0;
   const games = fromLibrary
@@ -21,7 +31,7 @@ export function TopGames({ stats }) {
     <section className="container py-12 sm:py-16">
       <SectionTitle
         eyebrow="Top 5"
-        title="Tes jeux les plus joués"
+        title={title}
         description={fromLibrary ? 'Le suivi démarre : en attendant, voici ton temps total enregistré par Steam.' : `Temps suivi en ${stats.year}.`}
       />
       {games.length === 0 ? (
@@ -30,7 +40,7 @@ export function TopGames({ stats }) {
         <ol className="grid grid-cols-1 gap-2.5 sm:gap-3">
           {games.map((game, index) => (
             <Reveal key={game.appid} delay={index * 0.08}>
-              <Link to={`/jeux/${game.appid}`} className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              <GameLink appid={game.appid} interactive={interactive}>
               <SpotlightCard className="transition-colors hover:border-neon-violet/40">
                 <div className="flex items-center gap-3 p-3 sm:gap-4 sm:p-4">
                 <span className={`w-6 shrink-0 text-center text-xl font-black tabular-nums sm:w-8 sm:text-2xl ${RANK_COLORS[index]}`}>{index + 1}</span>
@@ -57,7 +67,7 @@ export function TopGames({ stats }) {
                 </div>
                 </div>
               </SpotlightCard>
-              </Link>
+              </GameLink>
             </Reveal>
           ))}
         </ol>
