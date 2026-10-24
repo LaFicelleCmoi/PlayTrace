@@ -1,5 +1,5 @@
 import { motion } from 'motion/react';
-import { Play, Share2 } from 'lucide-react';
+import { Globe, Play, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AuroraBackground } from '@/components/ui/aurora-background';
 import { CountUp } from '@/components/ui/count-up';
@@ -14,7 +14,30 @@ function Stat({ label, children }) {
   );
 }
 
-export function Hero({ user, stats, trackedSeconds, onPlay, onShare, sharing }) {
+function YearPicker({ years, value, onChange }) {
+  return (
+    <div className="mt-4 inline-flex gap-1 rounded-full border bg-card/60 p-1 backdrop-blur" role="group" aria-label="Année du Wrapped">
+      {years.map((year) => (
+        <button
+          key={year}
+          type="button"
+          onClick={() => onChange(year)}
+          aria-pressed={year === value}
+          className={`relative rounded-full px-3 py-1 text-xs font-semibold transition-colors sm:text-sm ${
+            year === value ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          {year === value && (
+            <motion.span layoutId="year-pill" className="absolute inset-0 rounded-full bg-secondary" transition={{ type: 'spring', stiffness: 400, damping: 32 }} />
+          )}
+          <span className="relative">{year}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+export function Hero({ user, stats, trackedSeconds, years = [], onYearChange, onPlay, onShare, sharing, onProfile, isPublic }) {
   const { totals, library, trackingSince, year } = stats;
 
   return (
@@ -30,6 +53,7 @@ export function Hero({ user, stats, trackedSeconds, onPlay, onShare, sharing }) 
           <span className="hidden sm:inline"> · </span>
           <span className="block sm:inline">ton {year} sur Steam</span>
         </motion.p>
+        {years.length > 1 && <YearPicker years={years} value={year} onChange={onYearChange} />}
 
         <motion.h1
           initial={{ opacity: 0, scale: 0.95 }}
@@ -59,6 +83,10 @@ export function Hero({ user, stats, trackedSeconds, onPlay, onShare, sharing }) 
           <Button size="lg" variant="outline" onClick={onShare} disabled={sharing} className="w-full bg-background/40 px-6 backdrop-blur sm:w-auto">
             <Share2 />
             {sharing ? 'Création de l’image…' : 'Partager en image'}
+          </Button>
+          <Button size="lg" variant="ghost" onClick={onProfile} className="w-full sm:w-auto">
+            <Globe className={isPublic ? 'text-neon-lime' : undefined} />
+            {isPublic ? 'Profil public' : 'Profil privé'}
           </Button>
         </motion.div>
 
