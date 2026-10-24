@@ -10,7 +10,8 @@
 ![Vite](https://img.shields.io/badge/Vite-5-646CFF?style=for-the-badge&logo=vite&logoColor=white)
 ![Tailwind](https://img.shields.io/badge/Tailwind-CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
 ![Node.js](https://img.shields.io/badge/Node.js-sans%20framework-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
-![SQLite](https://img.shields.io/badge/SQLite-003B57?style=for-the-badge&logo=sqlite&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-Postgres-3FCF8E?style=for-the-badge&logo=supabase&logoColor=white)
+![Vercel](https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)
 ![Steam](https://img.shields.io/badge/Steam-Web%20API-171A21?style=for-the-badge&logo=steam&logoColor=white)
 
 </div>
@@ -34,7 +35,9 @@ PlayTrace détecte le jeu en cours sur ton compte Steam, enregistre chaque sessi
 | Animations | **Motion** (motion.dev) |
 | Composants animés | React Bits, Aceternity UI, Magic UI, Kokonut UI, Lightswind, Cult UI |
 | Back | Node.js **sans framework** (module `http`) |
-| Base de données | SQLite |
+| Base de données | PostgreSQL (**Supabase**) |
+| Hébergement | **Vercel** (front + fonction API) |
+| Sondage | `pg_cron` Supabase, chaque minute |
 | Temps réel | SSE (Server-Sent Events) |
 | Données | API Web Steam |
 
@@ -89,18 +92,24 @@ PlayTrace détecte le jeu en cours sur ton compte Steam, enregistre chaque sessi
 ## 🏗️ Architecture
 
 ```
-┌──────────────┐   OpenID    ┌───────────────┐
-│   Navigateur │◄───────────►│  Serveur Node │
-│  React + UI  │   SSE ◄─────│  (sans fwk)   │
-└──────────────┘             └───────┬───────┘
-                                     │ sondage 60 s (1 seul, partagé)
-                       ┌─────────────┼─────────────┐
-                       ▼                           ▼
-                ┌────────────┐              ┌────────────┐
-                │   SQLite   │              │ API Steam  │
-                │  sessions  │              │ (clé en .env)
-                └────────────┘              └────────────┘
+┌──────────────┐   OpenID    ┌──────────────────────┐  sondage   ┌────────────┐
+│  Navigateur  │◄───────────►│  Vercel              │───────────►│ API Steam  │
+│  React + UI  │   SSE ◄─────│  front + api/index.js│            └────────────┘
+└──────────────┘             └──────────┬───────────┘
+                                        │ SQL               ▲ GET /api/cron/poll
+                                        ▼                   │ (toutes les minutes)
+                                 ┌──────────────────────────┴─┐
+                                 │  Supabase Postgres         │
+                                 │  schéma playtrace + pg_cron│
+                                 └────────────────────────────┘
+┌──────────────────────┐  POST /api/agent/downloads
+│ PC avec Steam        │─────────────────────────────► Vercel
+│ npm run agent        │  (téléchargements en cours)
+└──────────────────────┘
 ```
+
+- **Sur Vercel**, aucune fonction ne tourne en continu : c'est `pg_cron` (Supabase) qui appelle `/api/cron/poll` chaque minute, et le flux SSE envoie l'état puis se reconnecte toutes les 15 s.
+- **En local**, `npm run server` fait tout dans un seul process : sondage toutes les 60 s, SSE ouvert en continu, lecture directe des téléchargements Steam.
 
 ---
 
@@ -111,20 +120,24 @@ PlayTrace détecte le jeu en cours sur ton compte Steam, enregistre chaque sessi
 |---|---|
 | steamid64 | TEXT (clé primaire) |
 | pseudo | TEXT |
-| created_at | DATETIME |
+| avatar | TEXT |
+| created_at | TIMESTAMPTZ |
 
 **`sessions`**
 | Champ | Type |
 |---|---|
-| id | INTEGER (clé primaire) |
+| id | BIGINT (clé primaire) |
 | steamid64 | TEXT |
 | appid | INTEGER |
 | game_name | TEXT |
-| started_at | DATETIME |
-| ended_at | DATETIME |
+| started_at | TIMESTAMPTZ |
+| ended_at | TIMESTAMPTZ |
 | duration_s | INTEGER |
+| last_seen_at | TIMESTAMPTZ |
 
 **Cache** : liste des jeux possédés (`GetOwnedGames`), rafraîchie 1 fois par heure.
+
+Tout vit dans le schéma `playtrace` (non exposé par l'API REST de Supabase), créé par [`server/schema.sql`](server/schema.sql). L'app s'y connecte avec un rôle dédié `playtrace_app` qui n'a accès qu'à ce schéma.
 
 ---
 
@@ -155,7 +168,7 @@ npm install
 
 # 3. Configurer l'environnement
 cp .env.example .env
-# puis renseigner STEAM_API_KEY dans .env
+# puis renseigner STEAM_API_KEY et DATABASE_URL dans .env
 
 # 4. Lancer le serveur
 npm run server
@@ -167,10 +180,14 @@ npm run dev
 **`.env.example`**
 ```env
 STEAM_API_KEY=ta_cle_api_steam
+DATABASE_URL=postgresql://playtrace_app.<ref>:<mot_de_passe>@aws-1-eu-west-3.pooler.supabase.com:6543/postgres
 PORT=3000
 BASE_URL=http://localhost:5173
 SESSION_SECRET=une_longue_chaine_aleatoire_d_au_moins_32_caracteres
 POLL_INTERVAL_MS=60000
+CRON_SECRET=jeton_du_cron
+AGENT_TOKEN=jeton_de_l_agent
+AGENT_URL=https://play-trace-nine.vercel.app
 # Optionnels, pour les téléchargements en cours (détectés automatiquement sinon)
 # STEAM_PATH=/mnt/c/Program Files (x86)/Steam
 # STEAM_LOCAL_STEAMID=7656119XXXXXXXXXX
@@ -182,12 +199,35 @@ La clé API s'obtient sur : https://steamcommunity.com/dev/apikey (nom de domain
 
 ---
 
+## ☁️ Déploiement (Vercel + Supabase)
+
+1. **Supabase** : exécuter [`server/schema.sql`](server/schema.sql), créer le rôle `playtrace_app` (droits sur le schéma `playtrace` uniquement), puis activer `pg_cron` et `pg_net` et programmer l'appel :
+   ```sql
+   SELECT cron.schedule('playtrace-poll', '* * * * *', $$
+     SELECT net.http_get(
+       url := 'https://play-trace-nine.vercel.app/api/cron/poll',
+       headers := jsonb_build_object('Authorization', 'Bearer <CRON_SECRET>')
+     ) $$);
+   ```
+2. **Vercel** : importer le dépôt (preset Vite). [`vercel.json`](vercel.json) envoie `/api/*` et `/auth/*` vers la fonction [`api/index.js`](api/index.js), dans la région `cdg1` (Paris, à côté de la base).
+3. **Variables Vercel** : `STEAM_API_KEY`, `DATABASE_URL`, `SESSION_SECRET`, `CRON_SECRET`, `AGENT_TOKEN`, `BASE_URL` (URL publique du site).
+4. **Téléchargements en cours** : sur le PC qui a Steam, avec le même `AGENT_TOKEN` dans `.env` :
+   ```bash
+   npm run agent
+   ```
+
+Chaque push sur `main` redéploie automatiquement.
+
+---
+
 ## 📁 Structure du projet
 
 ```
 playtrace/
 ├── server/
-│   ├── index.js          # serveur HTTP + routes
+│   ├── app.js            # routes, communes au local et à Vercel
+│   ├── index.js          # serveur Node local (sondage + SSE continus)
+│   ├── agent.js          # envoie les téléchargements Steam au site déployé
 │   ├── config.js         # lecture et validation du .env
 │   ├── poller.js         # sondage GetPlayerSummaries
 │   ├── sessions.js       # ouverture / fermeture des sessions
@@ -201,7 +241,10 @@ playtrace/
 │   ├── security.js       # en-têtes, limitation par IP
 │   ├── static.js         # sert le build Vite en production
 │   ├── users.js          # profils
-│   └── db.js             # SQLite (node:sqlite)
+│   ├── schema.sql        # schéma Postgres
+│   └── db.js             # client Postgres (Supabase)
+├── api/
+│   └── index.js          # fonction Vercel
 ├── src/
 │   ├── components/
 │   │   ├── ui/           # shadcn/ui + composants animés
@@ -217,12 +260,13 @@ playtrace/
 │   └── main.jsx
 ├── .env.example
 ├── .gitignore
+├── vercel.json
 └── package.json
 ```
 
-> SQLite passe par le module natif `node:sqlite` : **Node.js 22.13 ou plus** est requis, sans dépendance native à compiler.
+> **Node.js 22 ou plus** est requis.
 
-**Production** : `npm run build` puis `npm start` (le serveur Node sert alors le front sur `PORT`, pense à mettre `BASE_URL` à jour).
+**Sans Vercel** : `npm run build` puis `npm start` (le serveur Node sert alors le front sur `PORT`, pense à mettre `BASE_URL` à jour).
 
 ---
 
@@ -231,7 +275,8 @@ playtrace/
 - Le **profil** et les **détails des jeux** doivent être en **public** sur Steam
 - Environ **100 000 requêtes par jour** par clé : un sondage par minute en consomme environ 1 440
 - Un Wrapped annuel n'est vraiment riche qu'après plusieurs semaines de collecte
-- L'API Web Steam ne donne **pas** les téléchargements : PlayTrace lit les fichiers `appmanifest_*.acf` du client Steam installé **sur la machine du serveur** (y compris Steam Windows vu depuis WSL via `/mnt/c`). Ils ne sont visibles que par le compte connecté à ce client. Sur un serveur distant, la fonction est simplement désactivée
+- L'API Web Steam ne donne **pas** les téléchargements : PlayTrace lit les fichiers `appmanifest_*.acf` du client Steam installé sur ton PC (y compris Steam Windows vu depuis WSL via `/mnt/c`), via `npm run server` ou `npm run agent`. Ils ne sont visibles que par le compte connecté à ce client, et disparaissent du site si l'agent ne donne plus de nouvelles depuis 45 s
+- Le serveur local et Vercel partagent la même base si `DATABASE_URL` est la même : évite de laisser `npm run server` tourner en même temps que la prod, sinon Steam est sondé deux fois
 
 ---
 
