@@ -35,6 +35,13 @@
 
   body {
     @apply bg-background text-foreground antialiased;
+    overflow-x: clip;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  h1,
+  h2 {
+    text-wrap: balance;
   }
 }
 
