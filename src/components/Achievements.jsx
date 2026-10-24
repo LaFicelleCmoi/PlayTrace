@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { CheckCircle2, ChevronDown, CircleHelp, EyeOff, Lock, Trophy } from 'lucide-react';
+import { CheckCircle2, ChevronDown, CircleHelp, EyeOff, Lock, Target, Trophy } from 'lucide-react';
+import { AchievementChart } from '@/components/AchievementChart';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { CountUp } from '@/components/ui/count-up';
@@ -66,6 +67,8 @@ function AchievementCard({ item, known }) {
   const rarity = rarityOf(item.percent);
   const state = !known ? 'unknown' : item.achieved ? 'unlocked' : 'locked';
   const secret = item.hidden && state !== 'unlocked' && !revealed;
+  // Steam ne fournit jamais la description d'un succès caché : rien à « révéler » dans ce cas.
+  const silent = item.hidden && !item.description;
 
   return (
     <motion.li
@@ -134,7 +137,12 @@ function AchievementCard({ item, known }) {
             )}
           </div>
 
-          {secret ? (
+          {silent ? (
+            <p className="mt-0.5 flex items-center gap-1.5 text-xs italic text-muted-foreground">
+              <EyeOff className="size-3.5 shrink-0" />
+              {state === 'unlocked' ? 'Succès secret débloqué : le jeu garde sa description pour lui.' : 'Succès caché : le jeu n’en dit pas plus.'}
+            </p>
+          ) : secret ? (
             <button
               type="button"
               onClick={() => setRevealed(true)}
@@ -183,6 +191,46 @@ function AchievementCard({ item, known }) {
         </div>
       </div>
     </motion.li>
+  );
+}
+
+/** Les succès manquants que le plus de joueurs ont : les plus faciles à aller chercher. */
+function EasyWins({ items }) {
+  const easy = items
+    .filter((item) => !item.achieved && item.percent !== null)
+    .sort((a, b) => b.percent - a.percent)
+    .slice(0, 3);
+  if (easy.length === 0) return null;
+
+  return (
+    <div className="mb-6">
+      <p className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm font-semibold">
+        <Target className="size-4 text-neon-cyan" />
+        À portée de main
+        <span className="w-full text-xs font-normal text-muted-foreground sm:w-auto sm:text-sm">
+          Les succès manquants les plus obtenus par les autres joueurs
+        </span>
+      </p>
+      <ul className="grid grid-cols-1 gap-2.5 md:grid-cols-3">
+        {easy.map((item, index) => (
+          <motion.li
+            key={item.apiName}
+            initial={{ opacity: 0, y: 12 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: index * 0.08 }}
+            className="flex gap-3 rounded-xl border border-neon-cyan/30 bg-neon-cyan/[0.05] p-3"
+          >
+            {item.icon && <img src={item.icon} alt="" loading="lazy" referrerPolicy="no-referrer" className="size-11 shrink-0 rounded-lg border" />}
+            <div className="min-w-0">
+              <p className="text-sm font-semibold leading-snug">{item.name}</p>
+              {item.description && <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{item.description}</p>}
+              <p className="mt-1 text-[11px] font-medium text-neon-cyan">{formatPercent(item.percent)} des joueurs l’ont</p>
+            </div>
+          </motion.li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -278,6 +326,9 @@ export function Achievements({ achievements }) {
           </div>
         </Card>
       )}
+
+      {known && <AchievementChart items={achievements.items} total={achievements.total} />}
+      {known && <EasyWins items={achievements.items} />}
 
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         {known ? (
