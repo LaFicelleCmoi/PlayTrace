@@ -21,7 +21,7 @@ export function LiveBanner({ status, connection }) {
   const elapsed = playing ? (now - Date.parse(status.startedAt)) / 1000 : 0;
 
   return (
-    <div className="container -mt-8 relative z-20">
+    <div className="container relative z-20 -mt-6 sm:-mt-8">
       <AnimatePresence mode="wait">
         {playing ? (
           <motion.div
@@ -36,26 +36,26 @@ export function LiveBanner({ status, connection }) {
               <GameImage appid={status.appid} kind="hero" alt="" className="h-full w-full blur-sm" />
             </div>
             <div className="absolute inset-0 bg-gradient-to-r from-card via-card/90 to-card/40" />
-            <div className="relative flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:p-6">
-              <GameImage appid={status.appid} alt={status.gameName} className="aspect-[460/215] w-full rounded-lg sm:w-48" />
-              <div className="min-w-0 flex-1">
+            <div className="relative grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-4 p-4 sm:p-6 md:grid-cols-[auto_minmax(0,1fr)_auto]">
+              <GameImage appid={status.appid} alt={status.gameName} className="aspect-[460/215] w-24 rounded-lg sm:w-40 lg:w-48" />
+              <div className="min-w-0">
                 <Badge variant="live">
                   <PulseDot />
                   EN DIRECT
                 </Badge>
-                <p className="mt-3 text-sm text-muted-foreground">En train de jouer à…</p>
+                <p className="mt-2 text-xs text-muted-foreground sm:mt-3 sm:text-sm">En train de jouer à…</p>
                 <motion.h2
                   animate={{ opacity: [1, 0.75, 1] }}
                   transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
-                  className="truncate text-2xl font-bold sm:text-3xl"
+                  className="line-clamp-2 break-words text-lg font-bold leading-tight sm:text-2xl lg:text-3xl"
                 >
                   {status.gameName}
                 </motion.h2>
-                <p className="mt-1 text-xs text-muted-foreground">Session lancée {formatDateTime(status.startedAt)}</p>
+                <p className="mt-1 hidden text-xs text-muted-foreground sm:block">Session lancée {formatDateTime(status.startedAt)}</p>
               </div>
-              <div className="text-left sm:text-right">
+              <div className="col-span-2 flex items-baseline justify-between gap-3 border-t border-white/5 pt-3 md:col-span-1 md:block md:border-0 md:pt-0 md:text-right">
                 <p className="text-xs uppercase tracking-wider text-muted-foreground">Session en cours</p>
-                <p className="font-mono text-3xl font-semibold tabular-nums text-neon-cyan sm:text-4xl">{formatClock(elapsed)}</p>
+                <p className="font-mono text-2xl font-semibold tabular-nums text-neon-cyan sm:text-3xl lg:text-4xl">{formatClock(elapsed)}</p>
               </div>
             </div>
             <BorderBeam width={2} />
@@ -66,7 +66,7 @@ export function LiveBanner({ status, connection }) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="flex items-center gap-4 rounded-2xl border bg-card/80 p-5 backdrop-blur"
+            className="flex items-center gap-3 rounded-2xl border bg-card/80 p-4 backdrop-blur sm:gap-4 sm:p-5"
           >
             {connection === 'closed' ? (
               <WifiOff className="size-6 shrink-0 text-destructive" />
