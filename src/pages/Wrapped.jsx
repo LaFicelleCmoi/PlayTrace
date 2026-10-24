@@ -12,6 +12,7 @@ import { LiveBanner } from '@/components/LiveBanner';
 import { PlayerProfile } from '@/components/PlayerProfile';
 import { SectionNav } from '@/components/SectionNav';
 import { SessionTimeline } from '@/components/SessionTimeline';
+import { ShareProfileDialog } from '@/components/ShareProfileDialog';
 import { isStarter, StarterCard } from '@/components/StarterCard';
 import { TopGames } from '@/components/TopGames';
 import { WrappedStory } from '@/components/WrappedStory';
@@ -23,6 +24,17 @@ import { renderWrappedImage, shareOrDownload } from '@/lib/shareImage';
 
 const YEAR = new Date().getFullYear();
 
+/** Année demandée dans l'URL (`?annee=2025`), sinon l'année en cours. */
+function yearFromUrl() {
+  const value = Number(new URLSearchParams(window.location.search).get('annee'));
+  return Number.isInteger(value) && value >= 2003 && value <= YEAR ? value : YEAR;
+}
+
+function yearsSince(trackingSince) {
+  const first = trackingSince ? new Date(trackingSince).getFullYear() : YEAR;
+  return Array.from({ length: YEAR - first + 1 }, (_, index) => YEAR - index);
+}
+
 const SECTIONS = [
   { id: 'top', label: 'Top 5' },
   { id: 'jeu-de-l-annee', label: 'Jeu de l’année' },
@@ -32,15 +44,28 @@ const SECTIONS = [
   { id: 'historique', label: 'Historique' },
 ];
 
-/** Page d'accueil : le Wrapped de l'année en cours. */
+/** Page d'accueil : le Wrapped d'une année (l'année en cours par défaut). */
 export function Wrapped({ user, live }) {
   const { status, downloads, connection } = live;
-  const { stats, sessions, error, reload } = useStats(YEAR, `${status?.sessionId}-${status?.playing}`);
-  const playing = Boolean(status?.playing);
+  const [year, setYear] = useState(yearFromUrl);
+  const { stats, sessions, error, reload } = useStats(year, `${status?.sessionId}-${status?.playing}`);
+  const current = year === YEAR;
+  // Le compteur ne grimpe en direct que pour l'année en cours.
+  const playing = current && Boolean(status?.playing);
   const now = useNow(playing);
   const insights = useMemo(() => (stats ? computeInsights(stats) : null), [stats]);
-  const starter = stats && insights ? isStarter(stats, insights) : false;
+  const starter = current && stats && insights ? isStarter(stats, insights) : false;
+
+  function changeYear(next) {
+    setYear(next);
+    const url = new URL(window.location.href);
+    if (next === YEAR) url.searchParams.delete('annee');
+    else url.searchParams.set('annee', String(next));
+    window.history.replaceState(null, '', url);
+  }
   const [storyOpen, setStoryOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [isPublic, setIsPublic] = useState(Boolean(user.publicProfile));
   const [sharing, setSharing] = useState(false);
 
   async function share() {
@@ -81,9 +106,20 @@ export function Wrapped({ user, live }) {
         user={user}
         stats={stats}
         trackedSeconds={trackedSeconds}
+        years={yearsSince(stats.trackingSince)}
+        onYearChange={changeYear}
         onPlay={() => setStoryOpen(true)}
         onShare={share}
         sharing={sharing}
+        onProfile={() => setProfileOpen(true)}
+        isPublic={isPublic}
+      />
+      <ShareProfileDialog
+        open={profileOpen}
+        onClose={() => setProfileOpen(false)}
+        user={user}
+        isPublic={isPublic}
+        onChange={setIsPublic}
       />
       <LiveBanner status={status} connection={connection} />
       <DownloadsPanel downloads={downloads} />
