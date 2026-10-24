@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
-import { ArrowUp, ArrowUpRight, Bell, BellOff, BellRing, Gamepad2, LibraryBig, LogOut, Orbit, Radio, ShieldCheck, Sparkles, UserRound } from 'lucide-react';
+import { ArrowUp, ArrowUpRight, Bell, BellOff, BellRing, Gamepad2, LibraryBig, LogOut, MonitorSmartphone, Orbit, Radio, ShieldCheck, Sparkles, UserRound } from 'lucide-react';
 import { siNodedotjs, siReact, siSteam, siSupabase, siTailwindcss, siVercel, siVite } from 'simple-icons';
 import { TextHoverEffect } from '@/components/ui/text-hover-effect';
 import { logout } from '@/lib/api';
+import { promptInstall, useInstallState } from '@/lib/install';
 import { toast } from '@/lib/toast';
 import { Link } from '@/lib/router';
 import { cn } from '@/lib/utils';
@@ -111,6 +112,28 @@ function NotificationToggle() {
   );
 }
 
+/** « Installer l'app » quand le navigateur le permet (instructions sur iPhone). */
+function InstallButton() {
+  const state = useInstallState();
+  if (!state) return null;
+  return (
+    <button
+      type="button"
+      className={linkClass}
+      onClick={async () => {
+        if (state === 'ios') {
+          toast({ title: 'Installer PlayTrace', description: 'Dans Safari : bouton Partager, puis « Sur l’écran d’accueil ».', tone: 'info', duration: 10_000 });
+        } else if (await promptInstall()) {
+          toast({ title: 'PlayTrace installé', description: 'Retrouve-le sur ton écran d’accueil.', tone: 'done' });
+        }
+      }}
+    >
+      <MonitorSmartphone className="size-4 shrink-0 transition-colors group-hover:text-neon-cyan" />
+      Installer l’app
+    </button>
+  );
+}
+
 function Column({ title, children }) {
   return (
     <div>
@@ -196,6 +219,7 @@ export function Footer({ user, live }) {
             <Column title="Explorer">
               <li><FooterLink to="/" icon={Sparkles}>Wrapped</FooterLink></li>
               <li><FooterLink to="/jeux" icon={LibraryBig}>Mes jeux</FooterLink></li>
+              <li><InstallButton /></li>
               {live?.status?.playing && (
                 <li><FooterLink to={`/jeux/${live.status.appid}`} icon={Radio}>Jeu en cours</FooterLink></li>
               )}
