@@ -1,5 +1,6 @@
 import { Marquee } from '@/components/ui/marquee';
 import { GameImage } from '@/components/GameImage';
+import { Link } from '@/lib/router';
 
 const MIN_ITEMS = 14;
 
@@ -19,13 +20,14 @@ export function GamesMarquee({ stats }) {
     <section className="py-8 sm:py-10" aria-label="Jeux joués">
       <Marquee duration={Math.max(20, track.length * 4)} gap="0.75rem">
         {track.map((game, index) => (
-          <GameImage
-            key={`${game.appid}-${index}`}
-            appid={game.appid}
-            kind="capsule"
-            alt={game.name}
-            className="aspect-[2/3] w-24 rounded-lg border shadow-lg transition-transform duration-300 hover:scale-105 sm:w-32 lg:w-36"
-          />
+          <Link key={`${game.appid}-${index}`} to={`/jeux/${game.appid}`} title={game.name} className="shrink-0 rounded-lg">
+            <GameImage
+              appid={game.appid}
+              kind="capsule"
+              alt={game.name}
+              className="aspect-[2/3] w-24 rounded-lg border shadow-lg transition-transform duration-300 hover:scale-105 sm:w-32 lg:w-36"
+            />
+          </Link>
         ))}
       </Marquee>
     </section>
