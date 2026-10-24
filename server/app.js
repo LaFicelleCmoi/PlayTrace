@@ -11,7 +11,7 @@ import {
   verifyLogin,
 } from './auth.js';
 import { getDownloads, saveDownloads } from './downloads.js';
-import { ART_KINDS, getArtUrl, getGameDetail, getLibraryGames } from './games.js';
+import { ART_KINDS, getAchievementProgress, getArtUrl, getGameDetail, getLibraryGames } from './games.js';
 import { ensureLibrary, getLibrarySummary } from './library.js';
 import { pollOnce } from './poller.js';
 import { applySecurityHeaders, clientIp, createRateLimiter, isSameOrigin } from './security.js';
@@ -131,6 +131,12 @@ const routes = {
     const user = await requireUser(req, res);
     if (!user) return;
     sendJson(res, 200, { games: await getLibraryGames(user.steamid64) });
+  },
+
+  'GET /api/games/achievements': async (req, res) => {
+    const user = await requireUser(req, res);
+    if (!user) return;
+    sendJson(res, 200, await getAchievementProgress(user.steamid64));
   },
 
   'GET /api/live': async (req, res) => {
