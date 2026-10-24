@@ -18,9 +18,10 @@ import { applySecurityHeaders, clientIp, createRateLimiter, isSameOrigin } from 
 import { getLiveStatus, getRecentSessions } from './sessions.js';
 import { sendOnce, subscribe } from './sse.js';
 import { serveStatic } from './static.js';
+import { getDuel, getPublicProfile } from './social.js';
 import { getYearStats } from './stats.js';
 import { getPlayerSummaries } from './steam.js';
-import { getUser, upsertUser } from './users.js';
+import { getUser, setPublicProfile, upsertUser } from './users.js';
 
 const apiLimiter = createRateLimiter({ windowMs: 60_000, max: 120 });
 const authLimiter = createRateLimiter({ windowMs: 60_000, max: 20 });
@@ -104,7 +105,29 @@ const routes = {
   'GET /api/me': async (req, res) => {
     const user = await requireUser(req, res);
     if (!user) return;
-    sendJson(res, 200, { steamid: user.steamid64, pseudo: user.pseudo, avatar: user.avatar, createdAt: user.created_at });
+    sendJson(res, 200, {
+      steamid: user.steamid64,
+      pseudo: user.pseudo,
+      avatar: user.avatar,
+      createdAt: user.created_at,
+      publicProfile: user.public_profile,
+    });
+  },
+
+  // Active ou désactive le profil public (lien partageable).
+  'POST /api/me/public': async (req, res) => {
+    if (!isSameOrigin(req)) return sendJson(res, 403, { error: 'Origine refusée' });
+    const user = await requireUser(req, res);
+    if (!user) return;
+    let body;
+    try {
+      body = await readJsonBody(req, 1024);
+    } catch {
+      return sendJson(res, 400, { error: 'JSON invalide' });
+    }
+    if (typeof body?.enabled !== 'boolean') return sendJson(res, 400, { error: 'Données invalides' });
+    await setPublicProfile(user.steamid64, body.enabled);
+    sendJson(res, 200, { publicProfile: body.enabled });
   },
 
   'GET /api/stats': async (req, res, url) => {
@@ -197,7 +220,39 @@ const routes = {
 };
 
 // Routes à paramètre : [méthode, motif, gestionnaire(req, res, url, ...captures)].
+function yearAndTz(url) {
+  return {
+    year: intParam(url, 'year', { min: 2003, max: 2100, fallback: new Date().getUTCFullYear() }),
+    tz: intParam(url, 'tz', { min: -840, max: 840, fallback: 0 }),
+  };
+}
+
 const patternRoutes = [
+  [
+    'GET',
+    /^\/api\/public\/(7656119\d{10})$/,
+    async (req, res, url, steamid) => {
+      const { year, tz } = yearAndTz(url);
+      if (year === null || tz === null) return sendJson(res, 400, { error: 'Paramètres invalides' });
+      const profile = await getPublicProfile(steamid, year, tz);
+      if (!profile) return sendJson(res, 404, { error: 'Ce profil est privé ou n’existe pas' });
+      sendJson(res, 200, profile);
+    },
+  ],
+  [
+    'GET',
+    /^\/api\/duel\/(7656119\d{10})$/,
+    async (req, res, url, steamid) => {
+      const user = await requireUser(req, res);
+      if (!user) return;
+      if (steamid === user.steamid64) return sendJson(res, 400, { error: 'Impossible de se défier soi-même' });
+      const { year, tz } = yearAndTz(url);
+      if (year === null || tz === null) return sendJson(res, 400, { error: 'Paramètres invalides' });
+      const duel = await getDuel(user.steamid64, steamid, year, tz);
+      if (!duel) return sendJson(res, 404, { error: 'Ce profil est privé ou n’existe pas' });
+      sendJson(res, 200, duel);
+    },
+  ],
   [
     'GET',
     /^\/api\/art\/(\d{1,10})\/([a-z]+)$/,
