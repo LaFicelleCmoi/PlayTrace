@@ -1,5 +1,6 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { config } from './config.js';
+import { sql } from './db.js';
 
 const OPENID_ENDPOINT = 'https://steamcommunity.com/openid/login';
 const OPENID_NS = 'http://specs.openid.net/auth/2.0';
@@ -15,7 +16,6 @@ const SESSION_MAX_AGE_S = 30 * 24 * 60 * 60;
 
 const returnUrl = `${config.baseUrl}/auth/steam/return`;
 const secureCookies = config.baseUrl.startsWith('https://');
-const usedNonces = new Map();
 
 export function isValidSteamId(value) {
   return typeof value === 'string' && STEAMID_RE.test(value);
@@ -95,14 +95,13 @@ export function readState(req) {
   return readCookie(req, STATE_COOKIE);
 }
 
-function rememberNonce(nonce) {
-  const now = Date.now();
-  for (const [value, seenAt] of usedNonces) {
-    if (now - seenAt > NONCE_MAX_AGE_MS) usedNonces.delete(value);
-  }
-  if (usedNonces.has(nonce)) return false;
-  usedNonces.set(nonce, now);
-  return true;
+/** Enregistre le nonce en base (partagé entre toutes les instances) ; `false` s'il a déjà servi. */
+async function rememberNonce(nonce) {
+  await sql`DELETE FROM playtrace.openid_nonces WHERE seen_at < ${new Date(Date.now() - 2 * NONCE_MAX_AGE_MS)}`;
+  const inserted = await sql`
+    INSERT INTO playtrace.openid_nonces (nonce) VALUES (${nonce}) ON CONFLICT (nonce) DO NOTHING RETURNING nonce
+  `;
+  return inserted.length === 1;
 }
 
 /**
@@ -125,7 +124,7 @@ export async function verifyLogin(query, expectedState) {
   const nonce = query.get('openid.response_nonce') ?? '';
   const issuedAt = Date.parse(nonce.slice(0, 20));
   if (!Number.isFinite(issuedAt) || Math.abs(Date.now() - issuedAt) > NONCE_MAX_AGE_MS) return null;
-  if (!rememberNonce(nonce)) return null;
+  if (!(await rememberNonce(nonce))) return null;
 
   const body = new URLSearchParams();
   for (const [key, value] of query) {
