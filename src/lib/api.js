@@ -18,6 +18,12 @@ export const api = {
   sessions: (limit = 20) => request(`/api/sessions?limit=${limit}`),
   games: () => request('/api/games'),
   game: (appid) => request(`/api/games/${appid}`),
+  setPublicProfile: (enabled) =>
+    request('/api/me/public', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled }),
+    }),
   logout: () => request('/auth/logout', { method: 'POST' }),
 };
 
