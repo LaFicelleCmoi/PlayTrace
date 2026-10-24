@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { CheckCircle2, ChevronDown, EyeOff, Lock, Trophy } from 'lucide-react';
+import { CheckCircle2, ChevronDown, CircleHelp, EyeOff, Lock, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { CountUp } from '@/components/ui/count-up';
@@ -60,11 +60,12 @@ function SegmentedControl({ options, value, onChange, label, layoutId }) {
   );
 }
 
+// Trois états bien distincts : obtenu (couleur, halo, date), manquant (gris, pointillés), inconnu (profil privé).
 function AchievementCard({ item, known }) {
   const [revealed, setRevealed] = useState(false);
   const rarity = rarityOf(item.percent);
-  const secret = item.hidden && !item.achieved && !revealed;
-  const unlocked = known && item.achieved;
+  const state = !known ? 'unknown' : item.achieved ? 'unlocked' : 'locked';
+  const secret = item.hidden && state !== 'unlocked' && !revealed;
 
   return (
     <motion.li
@@ -74,63 +75,112 @@ function AchievementCard({ item, known }) {
       exit={{ opacity: 0, scale: 0.96 }}
       transition={{ duration: 0.3 }}
       className={cn(
-        'flex gap-3 rounded-xl border p-3 transition-colors',
-        unlocked ? 'border-neon-violet/30 bg-neon-violet/[0.06]' : 'bg-card/70',
+        'group relative rounded-xl',
+        // Obtenu : liseré dégradé néon tout autour de la carte.
+        state === 'unlocked' &&
+          'bg-gradient-to-br from-neon-lime/70 via-neon-cyan/40 to-neon-violet/60 p-px shadow-[0_0_30px_-12px_rgba(163,230,53,0.7)]',
       )}
     >
-      <div className="relative shrink-0 self-start">
-        {item.icon ? (
-          <img
-            src={unlocked || !known ? item.icon : item.iconGray}
-            alt=""
-            loading="lazy"
-            referrerPolicy="no-referrer"
-            className={cn('size-12 rounded-lg border sm:size-14', known && !unlocked && 'opacity-60')}
-          />
-        ) : (
-          <div className="flex size-12 items-center justify-center rounded-lg border bg-secondary sm:size-14">
-            <Trophy className="size-5 text-muted-foreground" />
-          </div>
+      <div
+        className={cn(
+          'relative flex h-full gap-3 overflow-hidden rounded-xl p-3 transition duration-300',
+          state === 'unlocked' && 'rounded-[11px] bg-background',
+          state === 'locked' && 'border border-dashed border-white/10 bg-transparent opacity-60 hover:opacity-100',
+          state === 'unknown' && 'border bg-card/70',
         )}
-        {unlocked && <CheckCircle2 className="absolute -bottom-1 -right-1 size-5 rounded-full bg-background text-neon-lime" />}
-        {known && !unlocked && <Lock className="absolute -bottom-1 -right-1 size-5 rounded-full bg-background p-0.5 text-muted-foreground" />}
-      </div>
+        style={state === 'unlocked' ? { backgroundImage: 'linear-gradient(135deg, rgba(163, 230, 53, 0.1), rgba(167, 139, 250, 0.06) 55%, transparent)' } : undefined}
+      >
+        {state === 'unlocked' && (
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent transition-transform duration-700 group-hover:translate-x-full"
+          />
+        )}
 
-      <div className="min-w-0 flex-1">
-        <div className="flex items-start justify-between gap-2">
-          <p className={cn('text-sm font-semibold leading-snug', known && !unlocked && 'text-foreground/80')}>{item.name}</p>
-          {rarity && <span className={cn('shrink-0 text-[11px] font-semibold', rarity.className)}>{formatPercent(item.percent)}</span>}
+        <div className="relative shrink-0 self-start">
+          {state === 'unlocked' && <span aria-hidden className="absolute -inset-1 rounded-xl bg-neon-lime/30 blur-md" />}
+          {item.icon ? (
+            <img
+              src={state === 'locked' ? item.iconGray : item.icon}
+              alt=""
+              loading="lazy"
+              referrerPolicy="no-referrer"
+              className={cn(
+                'relative size-12 rounded-lg sm:size-14',
+                state === 'unlocked' && 'ring-2 ring-neon-lime/70',
+                state === 'locked' && 'border border-white/10 brightness-75 grayscale',
+                state === 'unknown' && 'border',
+              )}
+            />
+          ) : (
+            <div className="relative flex size-12 items-center justify-center rounded-lg border bg-secondary sm:size-14">
+              <Trophy className="size-5 text-muted-foreground" />
+            </div>
+          )}
+          {state === 'unlocked' && <CheckCircle2 className="absolute -bottom-1.5 -right-1.5 size-5 rounded-full bg-background text-neon-lime" />}
+          {state === 'locked' && <Lock className="absolute -bottom-1.5 -right-1.5 size-5 rounded-full bg-background p-0.5 text-muted-foreground" />}
+          {state === 'unknown' && <CircleHelp className="absolute -bottom-1.5 -right-1.5 size-5 rounded-full bg-background text-muted-foreground" />}
         </div>
 
-        {secret ? (
-          <button
-            type="button"
-            onClick={() => setRevealed(true)}
-            className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
-          >
-            <EyeOff className="size-3.5" />
-            Succès caché · révéler
-          </button>
-        ) : (
-          item.description && <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{item.description}</p>
-        )}
-
-        {rarity && (
-          <div className="mt-2 flex items-center gap-2">
-            <div className="h-1 flex-1 overflow-hidden rounded-full bg-secondary">
-              <motion.div
-                className={cn('h-full rounded-full', rarity.bar)}
-                initial={{ width: 0 }}
-                whileInView={{ width: `${Math.max(2, item.percent)}%` }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.8, ease: 'easeOut' }}
-              />
-            </div>
-            <span className={cn('shrink-0 text-[10px] uppercase tracking-wide', rarity.className)}>{rarity.label}</span>
+        <div className="relative min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <p className={cn('text-sm font-semibold leading-snug', state === 'locked' ? 'text-muted-foreground' : 'text-foreground')}>
+              {item.name}
+            </p>
+            {rarity && (
+              <span className={cn('shrink-0 text-[11px] font-semibold', state === 'locked' ? 'text-muted-foreground' : rarity.className)}>
+                {formatPercent(item.percent)}
+              </span>
+            )}
           </div>
-        )}
 
-        {unlocked && item.unlockedAt && <p className="mt-1.5 text-[11px] text-neon-lime/90">Obtenu le {formatDate(item.unlockedAt)}</p>}
+          {secret ? (
+            <button
+              type="button"
+              onClick={() => setRevealed(true)}
+              className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+            >
+              <EyeOff className="size-3.5" />
+              Succès caché · révéler
+            </button>
+          ) : (
+            item.description && (
+              <p className={cn('mt-0.5 text-xs leading-relaxed', state === 'locked' ? 'text-muted-foreground/80' : 'text-muted-foreground')}>
+                {item.description}
+              </p>
+            )
+          )}
+
+          {rarity && (
+            <div className="mt-2 flex items-center gap-2">
+              <div className="h-1 flex-1 overflow-hidden rounded-full bg-secondary">
+                <motion.div
+                  className={cn('h-full rounded-full', state === 'locked' ? 'bg-muted-foreground/40' : rarity.bar)}
+                  initial={{ width: 0 }}
+                  whileInView={{ width: `${Math.max(2, item.percent)}%` }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.8, ease: 'easeOut' }}
+                />
+              </div>
+              <span className={cn('shrink-0 text-[10px] uppercase tracking-wide', state === 'locked' ? 'text-muted-foreground' : rarity.className)}>
+                {rarity.label}
+              </span>
+            </div>
+          )}
+
+          {state === 'unlocked' && (
+            <p className="mt-2 inline-flex items-center gap-1 rounded-md bg-neon-lime/10 px-2 py-0.5 text-[11px] font-medium text-neon-lime">
+              <CheckCircle2 className="size-3" />
+              Obtenu{item.unlockedAt ? ` le ${formatDate(item.unlockedAt)}` : ''}
+            </p>
+          )}
+          {state === 'locked' && (
+            <p className="mt-2 inline-flex items-center gap-1 rounded-md border border-dashed border-white/10 px-2 py-0.5 text-[11px] text-muted-foreground">
+              <Lock className="size-3" />
+              Pas encore obtenu
+            </p>
+          )}
+        </div>
       </div>
     </motion.li>
   );
