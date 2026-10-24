@@ -29,6 +29,10 @@ export function matchRoute(pathname) {
   if (/^\/jeux\/?$/.test(pathname)) return { page: 'library' };
   const game = /^\/jeux\/(\d{1,10})\/?$/.exec(pathname);
   if (game) return { page: 'game', appid: Number(game[1]) };
+  const player = /^\/joueur\/(7656119\d{10})\/?$/.exec(pathname);
+  if (player) return { page: 'public', steamid: player[1] };
+  const duel = /^\/duel\/(7656119\d{10})\/?$/.exec(pathname);
+  if (duel) return { page: 'duel', steamid: duel[1] };
   return { page: 'notfound' };
 }
 
