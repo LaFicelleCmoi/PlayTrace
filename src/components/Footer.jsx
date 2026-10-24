@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
-import { ArrowUp, ArrowUpRight, Bell, BellOff, BellRing, Gamepad2, LibraryBig, LogOut, MonitorSmartphone, Orbit, Radio, ShieldCheck, Sparkles, UserRound } from 'lucide-react';
+import { ArrowUp, ArrowUpRight, Bell, BellOff, BellRing, Gamepad2, LibraryBig, LogOut, MonitorSmartphone, Orbit, Radio, ShieldCheck, Sparkles, Swords, UserRound } from 'lucide-react';
 import { siNodedotjs, siReact, siSteam, siSupabase, siTailwindcss, siVercel, siVite } from 'simple-icons';
 import { TextHoverEffect } from '@/components/ui/text-hover-effect';
 import { logout } from '@/lib/api';
@@ -219,6 +219,7 @@ export function Footer({ user, live }) {
             <Column title="Explorer">
               <li><FooterLink to="/" icon={Sparkles}>Wrapped</FooterLink></li>
               <li><FooterLink to="/jeux" icon={LibraryBig}>Mes jeux</FooterLink></li>
+              <li><FooterLink to="/defis" icon={Swords}>Défis</FooterLink></li>
               <li><InstallButton /></li>
               {live?.status?.playing && (
                 <li><FooterLink to={`/jeux/${live.status.appid}`} icon={Radio}>Jeu en cours</FooterLink></li>
