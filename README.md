@@ -65,6 +65,7 @@ PlayTrace détecte le jeu en cours sur ton compte Steam, enregistre chaque sessi
 - 💾 Enregistrement des sessions (jeu, début, fin, durée)
 - 🔴 Bandeau **« En train de jouer à… »** en direct, qui pulse
 - 📊 Stats : heures totales, **top 5** des jeux, **jeu de l'année**
+- 📥 **Téléchargements en cours** : jeux que ton client Steam télécharge, met à jour ou installe (progression, vitesse, temps restant)
 
 ### Bonus
 - 🔥 Heatmap d'activité par jour et par heure
@@ -170,6 +171,9 @@ PORT=3000
 BASE_URL=http://localhost:5173
 SESSION_SECRET=une_longue_chaine_aleatoire_d_au_moins_32_caracteres
 POLL_INTERVAL_MS=60000
+# Optionnels, pour les téléchargements en cours (détectés automatiquement sinon)
+# STEAM_PATH=/mnt/c/Program Files (x86)/Steam
+# STEAM_LOCAL_STEAMID=7656119XXXXXXXXXX
 ```
 
 > Ajoute `.env` au `.gitignore` **avant** ton premier commit.
@@ -191,6 +195,8 @@ playtrace/
 │   ├── library.js        # cache GetOwnedGames (1 h)
 │   ├── steam.js          # appels à l'API Web Steam
 │   ├── sse.js            # flux temps réel
+│   ├── downloads.js      # téléchargements du client Steam local
+│   ├── vdf.js            # lecture des fichiers .vdf / .acf de Steam
 │   ├── auth.js           # Steam OpenID + cookie de session signé
 │   ├── security.js       # en-têtes, limitation par IP
 │   ├── static.js         # sert le build Vite en production
@@ -200,6 +206,7 @@ playtrace/
 │   ├── components/
 │   │   ├── ui/           # shadcn/ui + composants animés
 │   │   ├── LiveBanner.jsx
+│   │   ├── DownloadsPanel.jsx
 │   │   ├── TopGames.jsx
 │   │   ├── GameOfTheYear.jsx
 │   │   ├── Heatmap.jsx
@@ -224,6 +231,7 @@ playtrace/
 - Le **profil** et les **détails des jeux** doivent être en **public** sur Steam
 - Environ **100 000 requêtes par jour** par clé : un sondage par minute en consomme environ 1 440
 - Un Wrapped annuel n'est vraiment riche qu'après plusieurs semaines de collecte
+- L'API Web Steam ne donne **pas** les téléchargements : PlayTrace lit les fichiers `appmanifest_*.acf` du client Steam installé **sur la machine du serveur** (y compris Steam Windows vu depuis WSL via `/mnt/c`). Ils ne sont visibles que par le compte connecté à ce client. Sur un serveur distant, la fonction est simplement désactivée
 
 ---
 
