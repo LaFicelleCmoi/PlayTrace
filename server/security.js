@@ -4,7 +4,7 @@ const CSP = [
   "default-src 'self'",
   "script-src 'self'",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: https://*.steamstatic.com https://*.akamaihd.net",
+  "img-src 'self' data: blob: https://*.steamstatic.com https://*.akamaihd.net",
   "font-src 'self'",
   "connect-src 'self'",
   "object-src 'none'",
