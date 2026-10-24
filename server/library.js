@@ -12,6 +12,7 @@ async function refresh(steamid) {
     appid: game.appid,
     name: game.name ?? `App ${game.appid}`,
     playtime_minutes: game.playtime_forever ?? 0,
+    last_played: game.rtime_last_played ? new Date(game.rtime_last_played * 1000) : null,
   }));
 
   await sql.begin(async (tx) => {
