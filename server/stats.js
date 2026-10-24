@@ -4,7 +4,7 @@ import { sql } from './db.js';
 function yearSessions(steamid, from, to, now) {
   return sql`
     WITH s AS (
-      SELECT appid, game_name, started_at,
+      SELECT appid, btrim(game_name) AS game_name, started_at,
              COALESCE(duration_s, GREATEST(0, EXTRACT(EPOCH FROM ${now}::timestamptz - started_at))::int) AS dur
       FROM playtrace.sessions
       WHERE steamid64 = ${steamid} AND started_at >= ${from} AND started_at < ${to}
@@ -20,7 +20,7 @@ export async function getYearStats(steamid, year, tzOffset) {
   const now = new Date();
   const s = yearSessions(steamid, new Date(Date.UTC(year, 0, 1)), new Date(Date.UTC(year + 1, 0, 1)), now);
 
-  const [[totals], topGames, [longest], cells, [{ trackingSince }]] = await Promise.all([
+  const [[totals], topGames, [longest], cells, daily, [{ trackingSince }]] = await Promise.all([
     sql`${s} SELECT COALESCE(SUM(dur), 0)::int AS "trackedSeconds", COUNT(*)::int AS sessions, COUNT(DISTINCT appid)::int AS games FROM s`,
     sql`${s}
       SELECT appid, MAX(game_name) AS name, SUM(dur)::int AS seconds, COUNT(*)::int AS sessions
@@ -31,6 +31,12 @@ export async function getYearStats(steamid, year, tzOffset) {
       SELECT EXTRACT(DOW FROM local)::int AS dow, EXTRACT(HOUR FROM local)::int AS hour, SUM(dur)::int AS seconds
       FROM (SELECT dur, (started_at AT TIME ZONE 'UTC') - make_interval(mins => ${tzOffset}::int) AS local FROM s) t
       GROUP BY 1, 2
+    `,
+    // Temps et sessions par jour, en date locale du joueur (calendrier de l'année, séries).
+    sql`${s}
+      SELECT to_char(local, 'YYYY-MM-DD') AS day, SUM(dur)::int AS seconds, COUNT(*)::int AS sessions
+      FROM (SELECT dur, (started_at AT TIME ZONE 'UTC') - make_interval(mins => ${tzOffset}::int) AS local FROM s) t
+      GROUP BY 1 ORDER BY 1
     `,
     sql`SELECT MIN(started_at) AS "trackingSince" FROM playtrace.sessions WHERE steamid64 = ${steamid}`,
   ]);
@@ -48,5 +54,6 @@ export async function getYearStats(steamid, year, tzOffset) {
     topGames,
     gameOfTheYear: goty && { ...goty, share: totals.trackedSeconds ? goty.seconds / totals.trackedSeconds : 0 },
     heatmap,
+    daily,
   };
 }
