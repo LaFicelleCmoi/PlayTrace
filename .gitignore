@@ -1,0 +1,23 @@
+# Dépendances
+node_modules/
+
+# Build
+dist/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Base SQLite
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# Logs et éditeurs
+npm-debug.log*
+*.log
+.DS_Store
+.vscode/
+.idea/
