@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { motion } from 'motion/react';
-import { ArrowUp, ArrowUpRight, Gamepad2, LibraryBig, LogOut, Orbit, Radio, ShieldCheck, Sparkles, UserRound } from 'lucide-react';
+import { ArrowUp, ArrowUpRight, Bell, BellOff, BellRing, Gamepad2, LibraryBig, LogOut, Orbit, Radio, ShieldCheck, Sparkles, UserRound } from 'lucide-react';
 import { siNodedotjs, siReact, siSteam, siSupabase, siTailwindcss, siVercel, siVite } from 'simple-icons';
 import { TextHoverEffect } from '@/components/ui/text-hover-effect';
 import { logout } from '@/lib/api';
+import { toast } from '@/lib/toast';
 import { Link } from '@/lib/router';
 import { cn } from '@/lib/utils';
 
@@ -68,6 +70,44 @@ function FooterLink({ to, href, icon: Icon, children }) {
     <a href={href} target="_blank" rel="noreferrer noopener" className={linkClass}>
       {content}
     </a>
+  );
+}
+
+/** Autorise les notifications système (fin de session quand l'onglet est en arrière-plan). */
+function NotificationToggle() {
+  const supported = typeof window !== 'undefined' && 'Notification' in window;
+  const [permission, setPermission] = useState(supported ? Notification.permission : 'unsupported');
+  if (!supported) return null;
+
+  if (permission === 'granted') {
+    return (
+      <span className={linkClass}>
+        <BellRing className="size-4 shrink-0 text-neon-lime" />
+        Notifications activées
+      </span>
+    );
+  }
+  if (permission === 'denied') {
+    return (
+      <span className={linkClass} title="Autorise-les dans les réglages du navigateur">
+        <BellOff className="size-4 shrink-0" />
+        Notifications bloquées
+      </span>
+    );
+  }
+  return (
+    <button
+      type="button"
+      className={linkClass}
+      onClick={async () => {
+        const result = await Notification.requestPermission();
+        setPermission(result);
+        if (result === 'granted') toast({ title: 'Notifications activées', description: 'Tu seras prévenu à la fin de chaque session.', tone: 'done' });
+      }}
+    >
+      <Bell className="size-4 shrink-0 transition-colors group-hover:text-neon-cyan" />
+      Activer les notifications
+    </button>
   );
 }
 
@@ -165,6 +205,7 @@ export function Footer({ user, live }) {
               <Column title="Ton compte">
                 <li><FooterLink href={`https://steamcommunity.com/profiles/${user.steamid}`} icon={UserRound}>Profil Steam</FooterLink></li>
                 <li><FooterLink href="https://steamcommunity.com/my/edit/settings" icon={ShieldCheck}>Confidentialité</FooterLink></li>
+                <li><NotificationToggle /></li>
                 <li>
                   <button type="button" onClick={logout} className={linkClass}>
                     <LogOut className="size-4 shrink-0 transition-colors group-hover:text-neon-pink" />
