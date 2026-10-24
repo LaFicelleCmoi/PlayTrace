@@ -1,24 +1,22 @@
 import { useEffect, useState } from 'react';
-import { LogOut } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { DownloadsPanel } from '@/components/DownloadsPanel';
-import { GameOfTheYear } from '@/components/GameOfTheYear';
-import { GamesMarquee } from '@/components/GamesMarquee';
-import { Heatmap } from '@/components/Heatmap';
-import { Hero } from '@/components/Hero';
-import { LiveBanner } from '@/components/LiveBanner';
+import { AnimatePresence, motion } from 'motion/react';
+import { Gamepad2, LibraryBig, LogOut, Sparkles } from 'lucide-react';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Login } from '@/components/Login';
-import { SessionTimeline } from '@/components/SessionTimeline';
-import { TopGames } from '@/components/TopGames';
 import { useLiveStatus } from '@/hooks/useLiveStatus';
-import { useNow } from '@/hooks/useNow';
-import { useStats } from '@/hooks/useStats';
 import { api } from '@/lib/api';
+import { Link, matchRoute, usePathname } from '@/lib/router';
+import { cn } from '@/lib/utils';
+import { GameDetail } from '@/pages/GameDetail';
+import { Library } from '@/pages/Library';
+import { Wrapped } from '@/pages/Wrapped';
 
-const YEAR = new Date().getFullYear();
+const NAV = [
+  { to: '/', label: 'Wrapped', icon: Sparkles, pages: ['wrapped'] },
+  { to: '/jeux', label: 'Mes jeux', icon: LibraryBig, pages: ['library', 'game'] },
+];
 
-function Header({ user }) {
+function Header({ user, page }) {
   async function logout() {
     await api.logout().catch(() => {});
     window.location.assign('/');
@@ -26,16 +24,44 @@ function Header({ user }) {
 
   return (
     <header className="fixed inset-x-0 top-0 z-50 border-b border-white/5 bg-background/60 pt-[env(safe-area-inset-top)] backdrop-blur-lg">
-      <div className="container flex h-14 items-center justify-between gap-3">
-        <a href="/" className="flex items-center gap-2 font-bold">
+      <div className="container flex h-14 items-center justify-between gap-2 sm:gap-3">
+        <Link to="/" className="flex shrink-0 items-center gap-2 font-bold">
           <img src="/favicon.svg" alt="" className="size-6" />
-          <span>
+          <span className="hidden min-[380px]:inline">
             Play<span className="text-gradient">Trace</span>
           </span>
-        </a>
-        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-          {user.avatar && <img src={user.avatar} alt="" className="size-8 shrink-0 rounded-full border" referrerPolicy="no-referrer" />}
-          <span className="hidden max-w-[12rem] truncate text-sm sm:inline">{user.pseudo}</span>
+        </Link>
+
+        <nav className="flex items-center gap-1 rounded-full border bg-card/60 p-1" aria-label="Navigation principale">
+          {NAV.map(({ to, label, icon: Icon, pages }) => {
+            const active = pages.includes(page);
+            return (
+              <Link
+                key={to}
+                to={to}
+                aria-current={active ? 'page' : undefined}
+                className={cn(
+                  'relative flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors sm:text-sm',
+                  active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {active && (
+                  <motion.span
+                    layoutId="nav-pill"
+                    className="absolute inset-0 rounded-full bg-secondary"
+                    transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+                  />
+                )}
+                <Icon className="relative size-3.5 sm:size-4" />
+                <span className="relative">{label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-3">
+          {user.avatar && <img src={user.avatar} alt="" className="hidden size-8 shrink-0 rounded-full border min-[480px]:block" referrerPolicy="no-referrer" />}
+          <span className="hidden max-w-[10rem] truncate text-sm lg:inline">{user.pseudo}</span>
           <Button variant="ghost" size="icon" onClick={logout} aria-label="Se déconnecter">
             <LogOut />
           </Button>
@@ -45,49 +71,51 @@ function Header({ user }) {
   );
 }
 
-function Dashboard({ user }) {
-  const { status, downloads, connection } = useLiveStatus();
-  const { stats, sessions, error, reload } = useStats(YEAR, `${status?.sessionId}-${status?.playing}`);
-  const playing = Boolean(status?.playing);
-  const now = useNow(playing);
+function NotFound() {
+  return (
+    <div className="container flex min-h-[60dvh] flex-col items-center justify-center gap-4 text-center">
+      <Gamepad2 className="size-10 text-muted-foreground" />
+      <h1 className="text-2xl font-bold">Page introuvable</h1>
+      <Link to="/" className={buttonVariants()}>Retour au Wrapped</Link>
+    </div>
+  );
+}
 
-  if (error) {
-    return (
-      <div className="flex min-h-dvh flex-col items-center justify-center gap-4 px-4 text-center">
-        <p className="text-muted-foreground">Impossible de charger tes stats : {error.message}</p>
-        <Button onClick={reload}>Réessayer</Button>
-      </div>
-    );
-  }
+const TITLES = { wrapped: 'PlayTrace', library: 'Mes jeux · PlayTrace', notfound: 'Introuvable · PlayTrace' };
 
-  if (!stats) {
-    return (
-      <div className="container space-y-6 pt-28 sm:pt-32">
-        <Skeleton className="mx-auto h-24 w-full max-w-md" />
-        <Skeleton className="h-28 w-full" />
-        <Skeleton className="h-64 w-full" />
-      </div>
-    );
-  }
+function Shell({ user }) {
+  const pathname = usePathname();
+  const route = matchRoute(pathname);
+  // Un seul flux live pour toute l'app : il survit aux changements de page.
+  const live = useLiveStatus();
 
-  // Les stats sont calculées à `generatedAt` : on y ajoute le temps écoulé depuis pour la session en cours.
-  const liveFrom = playing ? Math.max(Date.parse(stats.generatedAt), Date.parse(status.startedAt)) : now;
-  const trackedSeconds = stats.totals.trackedSeconds + Math.max(0, (now - liveFrom) / 1000);
+  useEffect(() => {
+    if (TITLES[route.page]) document.title = TITLES[route.page];
+  }, [route.page]);
 
   return (
-    <main className="pt-[calc(3.5rem+env(safe-area-inset-top))]">
-      <Hero user={user} stats={stats} trackedSeconds={trackedSeconds} />
-      <LiveBanner status={status} connection={connection} />
-      <DownloadsPanel downloads={downloads} />
-      <GamesMarquee stats={stats} />
-      <TopGames stats={stats} />
-      <GameOfTheYear stats={stats} />
-      <Heatmap heatmap={stats.heatmap} />
-      <SessionTimeline sessions={sessions} />
+    <>
+      <Header user={user} page={route.page} />
+      <main className="min-h-dvh pt-[calc(3.5rem+env(safe-area-inset-top))]">
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={pathname}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
+          >
+            {route.page === 'wrapped' && <Wrapped user={user} live={live} />}
+            {route.page === 'library' && <Library live={live} />}
+            {route.page === 'game' && <GameDetail appid={route.appid} live={live} />}
+            {route.page === 'notfound' && <NotFound />}
+          </motion.div>
+        </AnimatePresence>
+      </main>
       <footer className="container py-10 pb-[calc(2.5rem+env(safe-area-inset-bottom))] text-center text-xs text-muted-foreground sm:py-12">
         PlayTrace · l’historique précis commence à l’activation du suivi.
       </footer>
-    </main>
+    </>
   );
 }
 
@@ -100,10 +128,5 @@ export default function App() {
 
   if (user === undefined) return <div className="min-h-dvh" />;
   if (!user) return <Login />;
-  return (
-    <>
-      <Header user={user} />
-      <Dashboard user={user} />
-    </>
-  );
+  return <Shell user={user} />;
 }
