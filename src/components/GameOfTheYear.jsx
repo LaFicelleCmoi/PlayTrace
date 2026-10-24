@@ -4,7 +4,10 @@ import { CountUp } from '@/components/ui/count-up';
 import { Reveal } from '@/components/ui/reveal';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
 import { GameImage } from '@/components/GameImage';
+import { buttonVariants } from '@/components/ui/button';
 import { formatNumber } from '@/lib/format';
+import { Link } from '@/lib/router';
+import { cn } from '@/lib/utils';
 
 export function GameOfTheYear({ stats }) {
   const tracked = stats.gameOfTheYear;
@@ -50,6 +53,12 @@ export function GameOfTheYear({ stats }) {
                   </>
                 )}
               </div>
+              <Link
+                to={`/jeux/${game.appid}`}
+                className={cn(buttonVariants({ variant: 'outline' }), 'mt-6 bg-background/60 backdrop-blur')}
+              >
+                Voir le détail et les succès
+              </Link>
             </div>
           </div>
           <BorderBeam width={2} />
