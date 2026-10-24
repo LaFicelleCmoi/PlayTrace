@@ -1,37 +1,130 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { motion } from 'motion/react';
-import { ChevronDown, Radio, Search, X } from 'lucide-react';
+import { ChevronDown, Radio, Search, Trophy, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { GameImage } from '@/components/GameImage';
 import { useApi } from '@/hooks/useApi';
+import { request } from '@/lib/api';
 import { formatDuration, formatNumber, formatRelative } from '@/lib/format';
 import { Link } from '@/lib/router';
 import { cn } from '@/lib/utils';
 
 const PAGE_SIZE = 30;
 
+// Part des succès obtenus, ou -1 si le jeu n'en a pas (ou pas encore chargés).
+const ratio = (game) => (game.achievements ? game.achievements.unlocked / game.achievements.total : -1);
+
 const SORTS = [
   { id: 'playtime', label: 'Temps de jeu', compare: (a, b) => b.minutes - a.minutes },
   { id: 'recent', label: 'Récents', compare: (a, b) => new Date(b.lastPlayed ?? 0) - new Date(a.lastPlayed ?? 0) },
+  { id: 'achievements', label: 'Succès', compare: (a, b) => ratio(b) - ratio(a) || b.minutes - a.minutes },
   { id: 'tracked', label: 'Suivi', compare: (a, b) => b.trackedSeconds - a.trackedSeconds || b.minutes - a.minutes },
   { id: 'name', label: 'A → Z', compare: (a, b) => a.name.localeCompare(b.name, 'fr') },
 ];
+
+const FILTERS = [
+  { id: 'all', label: 'Tous', test: () => true },
+  { id: 'progress', label: 'En cours', test: (game) => game.minutes > 0 && ratio(game) < 1 },
+  { id: 'complete', label: 'Complétés', test: (game) => ratio(game) === 1 },
+  { id: 'never', label: 'Jamais lancés', test: (game) => game.minutes === 0 && game.trackedSeconds === 0 },
+];
+
+/** Charge la progression des succès par lots (le serveur en rafraîchit 40 par appel). */
+function useAchievementProgress(enabled) {
+  const [state, setState] = useState({ status: 'loading', progress: {} });
+
+  useEffect(() => {
+    if (!enabled) return undefined;
+    let cancelled = false;
+    (async () => {
+      for (let round = 0; round < 10 && !cancelled; round += 1) {
+        try {
+          const result = await request('/api/games/achievements');
+          if (cancelled) return;
+          setState({ status: result.status, progress: result.progress });
+          if (!result.pending) return;
+        } catch {
+          if (!cancelled) setState((previous) => ({ ...previous, status: 'error' }));
+          return;
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled]);
+
+  return state;
+}
+
+function SegmentedControl({ options, value, onChange, label, layoutId }) {
+  return (
+    <div className="flex gap-1 overflow-x-auto rounded-lg border bg-card p-1 [scrollbar-width:none]" role="group" aria-label={label}>
+      {options.map((option) => (
+        <button
+          key={option.id}
+          type="button"
+          onClick={() => onChange(option.id)}
+          aria-pressed={value === option.id}
+          className={cn(
+            'relative shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium transition-colors sm:text-sm',
+            value === option.id ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
+          )}
+        >
+          {value === option.id && (
+            <motion.span layoutId={layoutId} className="absolute inset-0 rounded-md bg-secondary" transition={{ type: 'spring', stiffness: 400, damping: 32 }} />
+          )}
+          <span className="relative">{option.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
 
 // Recherche insensible aux accents et à la casse : « elden » trouve « ELDEN RING ».
 function normalize(value) {
   return value.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
 }
 
+function AchievementBar({ achievements }) {
+  const complete = achievements.unlocked === achievements.total;
+  const percent = Math.round((achievements.unlocked / achievements.total) * 100);
+  return (
+    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent px-2 pb-2 pt-6">
+      <div className="flex items-center justify-between gap-1 text-[10px] font-semibold">
+        <span className={cn('flex items-center gap-1', complete ? 'text-yellow-300' : 'text-white/90')}>
+          <Trophy className="size-3" />
+          {achievements.unlocked}/{achievements.total}
+        </span>
+        <span className={complete ? 'text-yellow-300' : 'text-white/70'}>{percent} %</span>
+      </div>
+      <div className="mt-1 h-1 overflow-hidden rounded-full bg-white/20">
+        <div
+          className={cn('h-full rounded-full', complete ? 'bg-yellow-300' : 'bg-gradient-to-r from-neon-cyan via-neon-violet to-neon-pink')}
+          style={{ width: `${percent}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 function GameCard({ game, playing }) {
+  const complete = game.achievements && game.achievements.unlocked === game.achievements.total;
   return (
     <Link
       to={`/jeux/${game.appid}`}
       className="group block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     >
-      <div className="relative overflow-hidden rounded-xl border bg-card shadow-lg transition duration-300 group-hover:-translate-y-1 group-hover:border-neon-violet/50 group-hover:shadow-[0_12px_40px_-12px_rgba(167,139,250,0.5)]">
+      <div
+        className={cn(
+          'relative overflow-hidden rounded-xl border bg-card shadow-lg transition duration-300 group-hover:-translate-y-1 group-hover:border-neon-violet/50 group-hover:shadow-[0_12px_40px_-12px_rgba(167,139,250,0.5)]',
+          complete && 'border-yellow-300/60 shadow-[0_0_24px_-8px_rgba(253,224,71,0.6)]',
+        )}
+      >
         <GameImage appid={game.appid} kind="capsule" alt="" className="aspect-[2/3] w-full transition duration-500 group-hover:scale-105" />
+        {game.achievements && <AchievementBar achievements={game.achievements} />}
         {playing && (
           <Badge variant="live" className="absolute left-2 top-2 bg-background/80 backdrop-blur">
             <Radio className="size-3" />
@@ -58,17 +151,25 @@ export function Library({ live }) {
   const { data, error, loading, reload } = useApi('/api/games');
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState('playtime');
+  const [filter, setFilter] = useState('all');
+  const progress = useAchievementProgress(Boolean(data));
   const [visible, setVisible] = useState(PAGE_SIZE);
   const deferredQuery = useDeferredValue(query);
   const playingAppid = live.status?.playing ? live.status.appid : null;
 
+  const allGames = useMemo(
+    () => (data?.games ?? []).map((game) => ({ ...game, achievements: progress.progress[game.appid] ?? null })),
+    [data, progress.progress],
+  );
+
   const games = useMemo(() => {
     const needle = normalize(deferredQuery.trim());
-    const list = (data?.games ?? []).filter((game) => !needle || normalize(game.name).includes(needle));
+    const test = FILTERS.find((option) => option.id === filter).test;
+    const list = allGames.filter((game) => test(game) && (!needle || normalize(game.name).includes(needle)));
     return list.sort(SORTS.find((option) => option.id === sort).compare);
-  }, [data, deferredQuery, sort]);
+  }, [allGames, deferredQuery, sort, filter]);
 
-  useEffect(() => setVisible(PAGE_SIZE), [deferredQuery, sort]);
+  useEffect(() => setVisible(PAGE_SIZE), [deferredQuery, sort, filter]);
 
   const totalMinutes = (data?.games ?? []).reduce((sum, game) => sum + game.minutes, 0);
 
@@ -106,25 +207,19 @@ export function Library({ live }) {
             </button>
           )}
         </label>
-        <div className="flex gap-1 overflow-x-auto rounded-lg border bg-card p-1 [scrollbar-width:none]" role="group" aria-label="Trier par">
-          {SORTS.map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              onClick={() => setSort(option.id)}
-              aria-pressed={sort === option.id}
-              className={cn(
-                'relative shrink-0 rounded-md px-3 py-1.5 text-xs font-medium transition-colors sm:text-sm',
-                sort === option.id ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              {sort === option.id && (
-                <motion.span layoutId="library-sort" className="absolute inset-0 rounded-md bg-secondary" transition={{ type: 'spring', stiffness: 400, damping: 32 }} />
-              )}
-              <span className="relative">{option.label}</span>
-            </button>
-          ))}
-        </div>
+        <SegmentedControl options={SORTS} value={sort} onChange={setSort} label="Trier par" layoutId="library-sort" />
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+        <SegmentedControl
+          options={FILTERS.map((option) => ({ ...option, label: `${option.label} (${allGames.filter(option.test).length})` }))}
+          value={filter}
+          onChange={setFilter}
+          label="Filtrer"
+          layoutId="library-filter"
+        />
+        {progress.status === 'loading' && data && <p className="text-xs text-muted-foreground">Chargement des succès…</p>}
+        {progress.status === 'private' && <p className="text-xs text-muted-foreground">Succès privés sur Steam : progression indisponible.</p>}
       </div>
 
       {error && (
