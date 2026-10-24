@@ -30,15 +30,15 @@ function DownloadRow({ download }) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, x: 40 }}
       transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-      className="flex items-center gap-4 rounded-xl border bg-card/80 p-3 backdrop-blur"
+      className="flex items-center gap-3 rounded-xl border bg-card/80 p-3 backdrop-blur sm:gap-4"
     >
-      <GameImage appid={download.appid} alt={download.name} className="hidden aspect-[460/215] w-28 shrink-0 rounded-md sm:block" />
+      <GameImage appid={download.appid} alt={download.name} className="aspect-[460/215] w-16 shrink-0 rounded-md sm:w-28" />
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-3">
-          <p className="truncate font-semibold">{download.name}</p>
+          <p className="min-w-0 truncate text-sm font-semibold sm:text-base">{download.name}</p>
           <Badge className={cn('shrink-0', className)}>
             <Icon className="size-3" />
-            {label}
+            <span className="sr-only sm:not-sr-only">{label}</span>
           </Badge>
         </div>
         <div className="relative mt-2 h-2 overflow-hidden rounded-full bg-secondary">
@@ -92,13 +92,13 @@ export function DownloadsPanel({ downloads }) {
           className="container overflow-hidden"
           aria-label="Téléchargements en cours"
         >
-          <div className="pt-6">
-            <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+          <div className="pt-5 sm:pt-6">
+            <h2 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.15em] text-muted-foreground sm:text-sm sm:tracking-[0.2em]">
               <Download className={cn('size-4', activeCount > 0 && 'animate-bounce text-neon-cyan')} />
               Téléchargements en cours
               <span className="text-xs normal-case tracking-normal">({downloads.length})</span>
             </h2>
-            <ul className="grid gap-2">
+            <ul className="grid grid-cols-1 gap-2">
               <AnimatePresence initial={false}>
                 {downloads.map((download) => (
                   <DownloadRow key={download.appid} download={download} />
