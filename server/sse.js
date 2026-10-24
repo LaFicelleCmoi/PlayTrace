@@ -6,8 +6,8 @@ function send(res, event, data) {
   res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
 }
 
-/** Ouvre un flux SSE pour `steamid` et envoie tout de suite l'état courant. */
-export function subscribe(req, res, steamid, initialStatus) {
+/** Ouvre un flux SSE pour `steamid` et envoie tout de suite l'état courant (`{ événement: données }`). */
+export function subscribe(req, res, steamid, initialEvents) {
   const streams = clients.get(steamid) ?? new Set();
   if (streams.size >= MAX_STREAMS_PER_USER) {
     res.writeHead(429, { 'Content-Type': 'text/plain; charset=utf-8' });
@@ -22,7 +22,7 @@ export function subscribe(req, res, steamid, initialStatus) {
     'X-Accel-Buffering': 'no',
   });
   res.write('retry: 5000\n\n');
-  send(res, 'status', initialStatus);
+  for (const [event, data] of Object.entries(initialEvents)) send(res, event, data);
 
   streams.add(res);
   clients.set(steamid, streams);
