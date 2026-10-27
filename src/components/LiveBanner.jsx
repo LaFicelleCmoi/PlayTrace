@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from 'motion/react';
 import { Moon, WifiOff } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { BorderBeam } from '@/components/ui/border-beam';
+import { NeonGlow } from '@/components/ui/neon-glow';
 import { GameImage } from '@/components/GameImage';
 import { useNow } from '@/hooks/useNow';
 import { formatClock, formatDateTime } from '@/lib/format';
@@ -31,39 +31,41 @@ export function LiveBanner({ status, connection }) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.98 }}
             transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-            className="relative overflow-hidden rounded-2xl border bg-card shadow-[0_0_60px_-15px_rgba(244,114,182,0.5)]"
+            className="relative rounded-2xl"
           >
-            <div className="absolute inset-0 opacity-25">
-              <GameImage appid={status.appid} kind="hero" alt="" className="h-full w-full blur-sm" />
-            </div>
-            <div className="absolute inset-0 bg-gradient-to-r from-card via-card/90 to-card/40" />
-            <div className="relative grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-4 p-4 sm:p-6 md:grid-cols-[auto_minmax(0,1fr)_auto]">
-              <Link to={`/jeux/${status.appid}`} className="rounded-lg">
-                <GameImage appid={status.appid} alt={status.gameName} className="aspect-[460/215] w-24 rounded-lg sm:w-40 lg:w-48" />
-              </Link>
-              <div className="min-w-0">
-                <Badge variant="live">
-                  <PulseDot />
-                  EN DIRECT
-                </Badge>
-                <p className="mt-2 text-xs text-muted-foreground sm:mt-3 sm:text-sm">En train de jouer à…</p>
-                <motion.h2
-                  animate={{ opacity: [1, 0.75, 1] }}
-                  transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
-                  className="line-clamp-2 break-words text-lg font-bold leading-tight sm:text-2xl lg:text-3xl"
-                >
-                  <Link to={`/jeux/${status.appid}`} className="hover:underline">
-                    {status.gameName}
-                  </Link>
-                </motion.h2>
-                <p className="mt-1 hidden text-xs text-muted-foreground sm:block">Session lancée {formatDateTime(status.startedAt)}</p>
+            <NeonGlow />
+            <div className="relative overflow-hidden rounded-2xl bg-card">
+              <div className="absolute inset-0 opacity-25">
+                <GameImage appid={status.appid} kind="hero" alt="" className="h-full w-full blur-sm" />
               </div>
-              <div className="col-span-2 flex items-baseline justify-between gap-3 border-t border-white/5 pt-3 md:col-span-1 md:block md:border-0 md:pt-0 md:text-right">
-                <p className="text-xs uppercase tracking-wider text-muted-foreground">Session en cours</p>
-                <p className="font-mono text-2xl font-semibold tabular-nums text-neon-cyan sm:text-3xl lg:text-4xl">{formatClock(elapsed)}</p>
+              <div className="absolute inset-0 bg-gradient-to-r from-card via-card/90 to-card/40" />
+              <div className="relative grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-4 p-4 sm:p-6 md:grid-cols-[auto_minmax(0,1fr)_auto]">
+                <Link to={`/jeux/${status.appid}`} className="rounded-lg">
+                  <GameImage appid={status.appid} alt={status.gameName} className="aspect-[460/215] w-24 rounded-lg sm:w-40 lg:w-48" />
+                </Link>
+                <div className="min-w-0">
+                  <Badge variant="live">
+                    <PulseDot />
+                    EN DIRECT
+                  </Badge>
+                  <p className="mt-2 text-xs text-muted-foreground sm:mt-3 sm:text-sm">En train de jouer à…</p>
+                  <motion.h2
+                    animate={{ opacity: [1, 0.75, 1] }}
+                    transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+                    className="line-clamp-2 break-words text-lg font-bold leading-tight sm:text-2xl lg:text-3xl"
+                  >
+                    <Link to={`/jeux/${status.appid}`} className="hover:underline">
+                      {status.gameName}
+                    </Link>
+                  </motion.h2>
+                  <p className="mt-1 hidden text-xs text-muted-foreground sm:block">Session lancée {formatDateTime(status.startedAt)}</p>
+                </div>
+                <div className="col-span-2 flex items-baseline justify-between gap-3 border-t border-white/5 pt-3 md:col-span-1 md:block md:border-0 md:pt-0 md:text-right">
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground">Session en cours</p>
+                  <p className="font-mono text-2xl font-semibold tabular-nums text-neon-cyan sm:text-3xl lg:text-4xl">{formatClock(elapsed)}</p>
+                </div>
               </div>
             </div>
-            <BorderBeam width={2} />
           </motion.div>
         ) : (
           <motion.div
