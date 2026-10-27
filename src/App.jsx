@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { AnimatePresence, motion } from 'motion/react';
+import { lazy, Suspense, useEffect, useState } from 'react';
+import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import { Gamepad2, LibraryBig, LogOut, Search, Sparkles, Swords } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { CommandPalette, useCommandPaletteShortcut } from '@/components/CommandPalette';
@@ -11,15 +11,32 @@ import { useSessionToasts } from '@/hooks/useSessionToasts';
 import { api, logout } from '@/lib/api';
 import { Link, matchRoute, usePathname } from '@/lib/router';
 import { cn } from '@/lib/utils';
-import { Account } from '@/pages/Account';
-import { Challenges } from '@/pages/Challenges';
-import { Duel } from '@/pages/Duel';
-import { GameDetail } from '@/pages/GameDetail';
-import { Legal } from '@/pages/Legal';
-import { Library } from '@/pages/Library';
-import { Privacy } from '@/pages/Privacy';
-import { PublicProfile } from '@/pages/PublicProfile';
-import { Wrapped } from '@/pages/Wrapped';
+
+// Une page = un fichier JS chargé à la demande : la première visite ne télécharge que ce qu'elle affiche.
+const LOADERS = {
+  wrapped: () => import('@/pages/Wrapped').then((m) => ({ default: m.Wrapped })),
+  account: () => import('@/pages/Account').then((m) => ({ default: m.Account })),
+  privacy: () => import('@/pages/Privacy').then((m) => ({ default: m.Privacy })),
+  legal: () => import('@/pages/Legal').then((m) => ({ default: m.Legal })),
+  challenges: () => import('@/pages/Challenges').then((m) => ({ default: m.Challenges })),
+  library: () => import('@/pages/Library').then((m) => ({ default: m.Library })),
+  game: () => import('@/pages/GameDetail').then((m) => ({ default: m.GameDetail })),
+  public: () => import('@/pages/PublicProfile').then((m) => ({ default: m.PublicProfile })),
+  duel: () => import('@/pages/Duel').then((m) => ({ default: m.Duel })),
+};
+
+// La page de l'URL d'arrivée se télécharge en même temps que la vérification de session.
+LOADERS[matchRoute(window.location.pathname).page]?.();
+
+const Wrapped = lazy(LOADERS.wrapped);
+const Account = lazy(LOADERS.account);
+const Privacy = lazy(LOADERS.privacy);
+const Legal = lazy(LOADERS.legal);
+const Challenges = lazy(LOADERS.challenges);
+const Library = lazy(LOADERS.library);
+const GameDetail = lazy(LOADERS.game);
+const PublicProfile = lazy(LOADERS.public);
+const Duel = lazy(LOADERS.duel);
 
 const NAV = [
   { to: '/', label: 'Wrapped', icon: Sparkles, pages: ['wrapped'] },
@@ -45,6 +62,8 @@ function Header({ user, page, onSearch }) {
               <Link
                 key={to}
                 to={to}
+                onPointerEnter={() => LOADERS[pages[0]]()}
+                onFocus={() => LOADERS[pages[0]]()}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
                   'relative flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-colors sm:text-sm',
@@ -90,6 +109,21 @@ function Header({ user, page, onSearch }) {
   );
 }
 
+function SkipLink() {
+  return (
+    <a
+      href="#contenu"
+      className="sr-only rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60]"
+    >
+      Aller au contenu
+    </a>
+  );
+}
+
+function PageFallback() {
+  return <div className="min-h-[60dvh]" aria-busy="true" />;
+}
+
 function NotFound() {
   return (
     <div className="container flex min-h-[60dvh] flex-col items-center justify-center gap-4 text-center">
@@ -125,9 +159,10 @@ function Shell({ user }) {
 
   return (
     <>
+      <SkipLink />
       <Header user={user} page={route.page} onSearch={() => setSearchOpen(true)} />
       <CommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
-      <main className="min-h-dvh pt-[calc(3.5rem+env(safe-area-inset-top))]">
+      <main id="contenu" tabIndex={-1} className="min-h-dvh pt-[calc(3.5rem+env(safe-area-inset-top))] outline-none">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={pathname}
@@ -136,26 +171,28 @@ function Shell({ user }) {
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.25, ease: 'easeOut' }}
           >
-            {route.page === 'wrapped' && (
-              <Wrapped user={user} live={live} isPublic={isPublic} onPublicChange={setIsPublic} trackingPaused={trackingPaused} />
-            )}
-            {route.page === 'account' && (
-              <Account
-                user={user}
-                isPublic={isPublic}
-                onPublicChange={setIsPublic}
-                trackingPaused={trackingPaused}
-                onTrackingChange={setTrackingPaused}
-              />
-            )}
-            {route.page === 'privacy' && <Privacy />}
-            {route.page === 'legal' && <Legal />}
-            {route.page === 'challenges' && <Challenges user={user} isPublic={isPublic} onPublicChange={setIsPublic} />}
-            {route.page === 'library' && <Library live={live} />}
-            {route.page === 'game' && <GameDetail appid={route.appid} live={live} />}
-            {route.page === 'public' && <PublicProfile steamid={route.steamid} viewer={user} />}
-            {route.page === 'duel' && <Duel steamid={route.steamid} />}
-            {route.page === 'notfound' && <NotFound />}
+            <Suspense fallback={<PageFallback />}>
+              {route.page === 'wrapped' && (
+                <Wrapped user={user} live={live} isPublic={isPublic} onPublicChange={setIsPublic} trackingPaused={trackingPaused} />
+              )}
+              {route.page === 'account' && (
+                <Account
+                  user={user}
+                  isPublic={isPublic}
+                  onPublicChange={setIsPublic}
+                  trackingPaused={trackingPaused}
+                  onTrackingChange={setTrackingPaused}
+                />
+              )}
+              {route.page === 'privacy' && <Privacy />}
+              {route.page === 'legal' && <Legal />}
+              {route.page === 'challenges' && <Challenges user={user} isPublic={isPublic} onPublicChange={setIsPublic} />}
+              {route.page === 'library' && <Library live={live} />}
+              {route.page === 'game' && <GameDetail appid={route.appid} live={live} />}
+              {route.page === 'public' && <PublicProfile steamid={route.steamid} viewer={user} />}
+              {route.page === 'duel' && <Duel steamid={route.steamid} />}
+              {route.page === 'notfound' && <NotFound />}
+            </Suspense>
           </motion.div>
         </AnimatePresence>
       </main>
@@ -169,6 +206,7 @@ function Shell({ user }) {
 function PublicLayout({ children }) {
   return (
     <>
+      <SkipLink />
       <header className="fixed inset-x-0 top-0 z-50 border-b border-white/5 bg-background/60 pt-[env(safe-area-inset-top)] backdrop-blur-lg">
         <div className="container flex h-14 items-center justify-between">
           <a href="/" className="flex items-center gap-2 font-bold">
@@ -180,8 +218,8 @@ function PublicLayout({ children }) {
           <a href="/auth/steam" className={buttonVariants({ size: 'sm', variant: 'outline' })}>Se connecter</a>
         </div>
       </header>
-      <main className="min-h-dvh pt-[calc(3.5rem+env(safe-area-inset-top))]">
-        {children}
+      <main id="contenu" tabIndex={-1} className="min-h-dvh pt-[calc(3.5rem+env(safe-area-inset-top))] outline-none">
+        <Suspense fallback={<PageFallback />}>{children}</Suspense>
       </main>
       <Footer />
     </>
@@ -196,12 +234,14 @@ export default function App() {
     api.me().then(setUser).catch(() => setUser(null));
   }, []);
 
-  if (user === undefined) return <div className="min-h-dvh" />;
-  if (!user) {
-    if (route.page === 'public') return <PublicLayout><PublicProfile steamid={route.steamid} viewer={null} /></PublicLayout>;
-    if (route.page === 'privacy') return <PublicLayout><Privacy /></PublicLayout>;
-    if (route.page === 'legal') return <PublicLayout><Legal /></PublicLayout>;
-    return <Login />;
-  }
-  return <Shell user={user} />;
+  let content;
+  if (user === undefined) content = <div className="min-h-dvh" />;
+  else if (user) content = <Shell user={user} />;
+  else if (route.page === 'public') content = <PublicLayout><PublicProfile steamid={route.steamid} viewer={null} /></PublicLayout>;
+  else if (route.page === 'privacy') content = <PublicLayout><Privacy /></PublicLayout>;
+  else if (route.page === 'legal') content = <PublicLayout><Legal /></PublicLayout>;
+  else content = <Login />;
+
+  // Les animations Motion suivent le réglage « réduire les animations » du système.
+  return <MotionConfig reducedMotion="user">{content}</MotionConfig>;
 }
