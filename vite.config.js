@@ -23,5 +23,16 @@ export default defineConfig({
   build: {
     sourcemap: false,
     minify: 'esbuild',
+    rollupOptions: {
+      output: {
+        // Les dépendances changent rarement : fichiers séparés, gardés en cache d'un déploiement à l'autre.
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined;
+          if (/[\\/](react|react-dom|scheduler)[\\/]/.test(id)) return 'react';
+          if (/[\\/](motion|framer-motion|motion-dom|motion-utils)[\\/]/.test(id)) return 'motion';
+          return 'vendor';
+        },
+      },
+    },
   },
 });
