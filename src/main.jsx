@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import '@fontsource-variable/inter';
 import './index.css';
 import App from './App.jsx';
+import { ErrorBoundary } from './components/ErrorBoundary.jsx';
 import { registerServiceWorker } from './lib/install';
 
 registerServiceWorker();
@@ -21,6 +22,8 @@ window.addEventListener('vite:preloadError', (event) => {
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </StrictMode>,
 );
