@@ -7,14 +7,17 @@ import { registerServiceWorker } from './lib/install';
 
 registerServiceWorker();
 
-// Après un déploiement, les anciens fichiers de page n'existent plus : on recharge une fois pour prendre la nouvelle version.
+// Après un déploiement, les anciens fichiers de page n'existent plus : on recharge pour prendre la nouvelle version.
+// Une seule fois par minute : si le fichier reste introuvable (hors ligne, panne), recharger ne ferait que boucler.
+const RELOAD_KEY = 'playtrace-reloaded-at';
+const RELOAD_COOLDOWN_MS = 60_000;
+
 window.addEventListener('vite:preloadError', (event) => {
-  if (sessionStorage.getItem('playtrace-reloaded')) return;
+  if (Date.now() - Number(sessionStorage.getItem(RELOAD_KEY)) < RELOAD_COOLDOWN_MS) return;
   event.preventDefault();
-  sessionStorage.setItem('playtrace-reloaded', '1');
+  sessionStorage.setItem(RELOAD_KEY, String(Date.now()));
   window.location.reload();
 });
-window.addEventListener('load', () => sessionStorage.removeItem('playtrace-reloaded'));
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
