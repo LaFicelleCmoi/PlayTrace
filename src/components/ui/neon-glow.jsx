@@ -10,15 +10,24 @@ const CORNERS = [
   '-bottom-1.5 -right-1.5 border-b-2 border-r-2 rounded-br-[inherit]',
 ];
 
+/** Le parent centre, l'enfant tourne : l'animation écrase `transform`, elle effacerait un centrage posé sur le même élément. */
+function SpinningGradient({ className }) {
+  return (
+    <div className="absolute left-1/2 top-1/2 aspect-square w-[150%] -translate-x-1/2 -translate-y-1/2">
+      <div className={cn('size-full animate-border-spin [animation-duration:10s]', GRADIENT, className)} />
+    </div>
+  );
+}
+
 /** Cadre façon HUD de jeu vidéo : liseré néon discret qui tourne, lueur légère et coins de visée. Le parent doit être `relative` et son contenu posé par-dessus. */
 export function NeonGlow({ className }) {
   return (
     <div aria-hidden className={cn('pointer-events-none absolute -inset-px rounded-[calc(1rem+1px)]', className)}>
       <div className="absolute inset-0 overflow-hidden rounded-[inherit] opacity-30 blur-lg">
-        <div className={cn('absolute left-1/2 top-1/2 aspect-square w-[150%] -translate-x-1/2 -translate-y-1/2 animate-border-spin [animation-duration:10s]', GRADIENT)} />
+        <SpinningGradient />
       </div>
       <div className="absolute inset-0 overflow-hidden rounded-[inherit] bg-white/5">
-        <div className={cn('absolute left-1/2 top-1/2 aspect-square w-[150%] -translate-x-1/2 -translate-y-1/2 animate-border-spin opacity-60 [animation-duration:10s]', GRADIENT)} />
+        <SpinningGradient className="opacity-60" />
       </div>
       {CORNERS.map((corner) => (
         <span key={corner} className={cn('absolute size-4 animate-pulse border-neon-cyan/80 sm:size-5', corner)} />
