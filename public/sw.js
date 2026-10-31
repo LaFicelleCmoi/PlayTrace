@@ -1,5 +1,5 @@
 // Service worker PlayTrace : l'app s'ouvre même hors ligne, mais les données restent toujours fraîches.
-const CACHE = 'playtrace-v1';
+const CACHE = 'playtrace-v2';
 const SHELL = ['/', '/favicon.svg', '/manifest.webmanifest', '/icons/icon-192.png'];
 
 self.addEventListener('install', (event) => {
@@ -28,8 +28,11 @@ self.addEventListener('fetch', (event) => {
         (cached) =>
           cached ||
           fetch(request).then((response) => {
-            const copy = response.clone();
-            caches.open(CACHE).then((cache) => cache.put(request, copy));
+            // Une erreur (404, 500) ne doit jamais rester en cache : ce fichier serait cassé pour toujours.
+            if (response.ok) {
+              const copy = response.clone();
+              caches.open(CACHE).then((cache) => cache.put(request, copy));
+            }
             return response;
           }),
       ),
@@ -42,8 +45,10 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE).then((cache) => cache.put('/', copy));
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE).then((cache) => cache.put('/', copy));
+          }
           return response;
         })
         .catch(() => caches.match('/')),
