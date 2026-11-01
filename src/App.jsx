@@ -9,6 +9,7 @@ import { Toaster } from '@/components/Toaster';
 import { useLiveStatus } from '@/hooks/useLiveStatus';
 import { useSessionToasts } from '@/hooks/useSessionToasts';
 import { api, logout } from '@/lib/api';
+import { setPipStatus } from '@/lib/pipTimer';
 import { Link, matchRoute, usePathname } from '@/lib/router';
 import { cn } from '@/lib/utils';
 
@@ -156,6 +157,8 @@ function Shell({ user }) {
   useEffect(() => {
     if (TITLES[route.page]) document.title = TITLES[route.page];
   }, [route.page]);
+
+  useEffect(() => setPipStatus(live.status, live.connection), [live.status, live.connection]);
 
   return (
     <>
