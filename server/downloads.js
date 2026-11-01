@@ -74,7 +74,7 @@ async function libraryDirs(steamRoot) {
 }
 
 /** Compte connecté au client Steam local : c'est le seul joueur qui verra ces téléchargements. */
-async function detectOwner(steamRoot) {
+export async function detectOwner(steamRoot) {
   if (config.localSteamId) return config.localSteamId;
   try {
     const { users = {} } = await readVdf(join(steamRoot, 'config', 'loginusers.vdf'));
@@ -173,12 +173,16 @@ export async function getDownloads(steamid) {
   return row.items;
 }
 
+export function findSteamRoot() {
+  return steamCandidates().find((path) => existsSync(path)) ?? null;
+}
+
 /**
  * Relit les manifestes toutes les 3 s et appelle `onChange(next, previous)` quand quelque chose bouge,
  * ou toutes les 15 s au minimum pour signaler que le client Steam est toujours là.
  */
 export function startDownloadWatcher(onChange) {
-  const steamRoot = steamCandidates().find((path) => existsSync(path));
+  const steamRoot = findSteamRoot();
   if (!steamRoot) {
     console.log('[downloads] client Steam introuvable : suivi des téléchargements désactivé (voir STEAM_PATH)');
     return;
