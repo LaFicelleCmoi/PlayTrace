@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "PlayTrace : temps de jeu en direct",
+  "version": "1.0.0",
+  "description": "Affiche le jeu Steam en cours et le temps de ta session, directement sur l'icône de l'extension.",
+  "icons": { "128": "icon.png" },
+  "action": {
+    "default_title": "PlayTrace",
+    "default_popup": "popup.html",
+    "default_icon": { "128": "icon.png" }
+  },
+  "background": { "service_worker": "background.js", "type": "module" },
+  "permissions": ["alarms"],
+  "host_permissions": ["https://play-trace-nine.vercel.app/*"]
+}
