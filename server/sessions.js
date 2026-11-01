@@ -1,4 +1,16 @@
+import { createHash } from 'node:crypto';
 import { sql } from './db.js';
+
+const UNCHANGED = { changed: false, ended: null, started: null };
+
+/**
+ * Identifiant d'un jeu non-Steam : négatif pour ne jamais croiser un vrai appid, et stable
+ * pour qu'un même raccourci cumule ses sessions. Tient dans la colonne INTEGER.
+ */
+export function shortcutAppid(key) {
+  const hash = createHash('sha256').update(key).digest().readUInt32BE(0) & 0x7fffffff;
+  return -(hash || 1);
+}
 
 async function getOpenSession(steamid, db = sql) {
   const [open] = await db`
@@ -25,20 +37,36 @@ async function closeSession(db, session, end) {
   return { ...session, ended_at: end, duration_s: duration };
 }
 
-/**
- * Applique un résultat de sondage : `game` vaut `{ appid, name }` ou `null` si le joueur ne joue pas.
- * Ferme la session ouverte si le jeu a changé et en ouvre une nouvelle si besoin.
- */
+/** Ferme la session ouverte si le jeu a changé et en ouvre une nouvelle si besoin. */
+async function applyPresence(tx, steamid, open, game, now) {
+  if (open && game && open.appid === game.appid) {
+    await tx`UPDATE playtrace.sessions SET last_seen_at = ${now} WHERE id = ${open.id}`;
+    return UNCHANGED;
+  }
+  const ended = open ? await closeSession(tx, open, now) : null;
+  const started = game ? await openSession(tx, steamid, game, now) : null;
+  return { changed: Boolean(ended || started), ended, started };
+}
+
+/** Applique un résultat de sondage : `game` vaut `{ appid, name }` ou `null` si Steam ne signale aucun jeu. */
 export async function recordPresence(steamid, game, now = new Date()) {
   return sql.begin(async (tx) => {
     const open = await getOpenSession(steamid, tx);
-    if (open && game && open.appid === game.appid) {
-      await tx`UPDATE playtrace.sessions SET last_seen_at = ${now} WHERE id = ${open.id}`;
-      return { changed: false, ended: null, started: null };
-    }
-    const ended = open ? await closeSession(tx, open, now) : null;
-    const started = game ? await openSession(tx, steamid, game, now) : null;
-    return { changed: Boolean(ended || started), ended, started };
+    // Steam ne signale pas les raccourcis : son silence ne ferme pas une session tenue par l'agent.
+    if (!game && open?.appid < 0) return UNCHANGED;
+    return applyPresence(tx, steamid, open, game, now);
+  });
+}
+
+/**
+ * Applique ce que l'agent local voit : `game` vaut `{ appid, name }` ou `null` si aucun raccourci ne tourne.
+ * Sans nouvelles de l'agent, `closeStaleSessions` ferme la session. Un jeu Steam détecté par le sondage reste prioritaire.
+ */
+export async function recordShortcutPresence(steamid, game, now = new Date()) {
+  return sql.begin(async (tx) => {
+    const open = await getOpenSession(steamid, tx);
+    if (open?.appid > 0) return UNCHANGED;
+    return applyPresence(tx, steamid, open, game, now);
   });
 }
 
