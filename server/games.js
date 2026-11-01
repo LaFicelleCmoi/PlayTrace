@@ -120,7 +120,7 @@ export async function getAchievementProgress(steamid) {
   const [played, cached] = await Promise.all([
     sql`
       SELECT appid FROM playtrace.owned_games WHERE steamid64 = ${steamid} AND playtime_minutes > 0
-      UNION SELECT DISTINCT appid FROM playtrace.sessions WHERE steamid64 = ${steamid}
+      UNION SELECT DISTINCT appid FROM playtrace.sessions WHERE steamid64 = ${steamid} AND appid > 0
     `,
     sql`SELECT appid, unlocked, total, fetched_at FROM playtrace.achievement_progress WHERE steamid64 = ${steamid}`,
   ]);
@@ -210,13 +210,18 @@ export async function getGameDetail(steamid, appid) {
       SELECT id, appid, game_name, started_at, ended_at, duration_s FROM playtrace.sessions
       WHERE steamid64 = ${steamid} AND appid = ${appid} ORDER BY started_at DESC LIMIT 20
     `,
-    cached(appid, 'store', () => getStoreDetails(appid)),
-    cached(appid, 'schema', () => getAchievementSchema(appid)),
-    cached(appid, 'rarity', () => getAchievementRarity(appid)),
-    getPlayerAchievements(steamid, appid).catch((error) => {
-      console.error(`[games] succès ${appid} :`, error.message);
-      return { error: 'unavailable' };
-    }),
+    // Jeu non-Steam (appid négatif) : Steam n'a ni fiche ni succès, seules nos sessions existent.
+    ...(appid > 0
+      ? [
+          cached(appid, 'store', () => getStoreDetails(appid)),
+          cached(appid, 'schema', () => getAchievementSchema(appid)),
+          cached(appid, 'rarity', () => getAchievementRarity(appid)),
+          getPlayerAchievements(steamid, appid).catch((error) => {
+            console.error(`[games] succès ${appid} :`, error.message);
+            return { error: 'unavailable' };
+          }),
+        ]
+      : [null, null, {}, { error: 'none' }]),
   ]);
 
   const storeInfo = summarizeStore(store);
@@ -258,7 +263,7 @@ export async function getLibraryGames(steamid) {
   ]);
 
   // Les visuels de toute la bibliothèque sont résolus d'un coup, avant que la grille ne les demande un par un.
-  await ensureArt([...new Set([...owned, ...tracked].map((game) => game.appid))]);
+  await ensureArt([...new Set([...owned, ...tracked].map((game) => game.appid))].filter((appid) => appid > 0));
 
   const trackedById = new Map(tracked.map((game) => [game.appid, game]));
   const games = owned.map((game) => {
