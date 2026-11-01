@@ -255,6 +255,22 @@ Ouvre **http://localhost:5173** et connecte-toi avec Steam.
 
 ---
 
+## 🧩 Extension de navigateur
+
+Le temps de ta session reste visible sans ouvrir le site, pour **Chrome, Edge, Brave** et les autres navigateurs Chromium récents (116+) :
+
+- **Badge** sur l'icône (`45m`, `1h23`, `12h`), mis à jour chaque minute ;
+- **Popup** avec la jaquette du jeu et un chrono à la seconde ;
+- **Mode PiP** : le chrono dans une petite fenêtre toujours au premier plan, redimensionnable.
+
+**Installation** : `chrome://extensions` → active le *mode développeur* → *Charger l'extension non empaquetée* → choisis le dossier [`extension/`](extension). Connecte-toi ensuite sur le site : l'extension utilise cette session, n'envoie rien d'autre et ne stocke rien.
+
+**Mode PiP** : icône de l'extension → *Mode PiP* → *Détacher le chrono*. Garde la petite fenêtre ouverte (tu peux la réduire), le chrono se ferme avec elle.
+
+> Le PiP passe au-dessus des jeux en **fenêtré** ou **plein écran sans bordure**, pas en plein écran exclusif. Le temps est compté à partir de la détection du jeu, soit jusqu'à une minute après son lancement.
+
+---
+
 ## ☁️ Déploiement
 
 **Vercel + Supabase**, chaque push sur `main` redéploie automatiquement.
@@ -286,6 +302,7 @@ Ouvre **http://localhost:5173** et connecte-toi avec Steam.
 | `GET` | `/api/stats?year=&tz=` | Stats de l'année, heatmap, calendrier, bibliothèque |
 | `GET` | `/api/sessions` | Dernières sessions |
 | `GET` | `/api/live` | Flux SSE : partie en cours et téléchargements |
+| `GET` | `/api/live/status` | Partie en cours en JSON (extension de navigateur) |
 | `GET` | `/api/games` | Bibliothèque complète |
 | `GET` | `/api/games/achievements` | Progression des succès de chaque jeu |
 | `GET` | `/api/games/:appid` | Fiche d'un jeu : Store, temps, sessions, succès |
@@ -321,6 +338,7 @@ PlayTrace/
 │   │   └── ui/               # shadcn/ui + composants animés
 │   ├── hooks/                # useLiveStatus (SSE), useStats, useApi…
 │   └── lib/                  # router, insights, shareImage, toast, install…
+├── extension/                # extension de navigateur : badge, popup, mode PiP
 ├── public/                   # manifeste PWA, service worker, icônes
 ├── docs/                     # bannière et captures du README
 └── vercel.json
