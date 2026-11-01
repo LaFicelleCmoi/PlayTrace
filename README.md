@@ -351,6 +351,7 @@ PlayTrace/
 ## ⚠️ Bon à savoir
 
 - Le **profil Steam** et les **détails des jeux** doivent être **publics** (Steam → Modifier le profil → Confidentialité) pour la détection du jeu en cours et les succès.
+- Les **jeux non-Steam** ajoutés à ta bibliothèque Steam sont suivis s'ils sont **lancés depuis Steam** (nom, chrono, sessions, statistiques), sans jaquette, succès ni compteur Steam. Un jeu lancé hors de Steam reste invisible : Steam ne le signale pas.
 - L'historique précis commence **à l'activation du suivi** : un Wrapped est vraiment riche après quelques semaines.
 - Environ **100 000 requêtes / jour** par clé Steam : un sondage par minute en consomme ~1 440, quel que soit le nombre de joueurs (100 par requête).
 - Les **téléchargements** ne sont visibles que si `npm run server` ou `npm run agent` tourne sur le PC qui a Steam.
