@@ -256,6 +256,13 @@ const routes = {
     subscribe(req, res, user.steamid64, events);
   },
 
+  // Partie en cours en JSON simple, pour l'extension de navigateur (sans flux SSE).
+  'GET /api/live/status': async (req, res) => {
+    const user = await requireUser(req, res);
+    if (!user) return;
+    sendJson(res, 200, await getLiveStatus(user.steamid64));
+  },
+
   // Appelé chaque minute par le cron Supabase (pg_cron) quand l'app tourne sur Vercel.
   'GET /api/cron/poll': async (req, res) => {
     if (!hasBearer(req, config.cronSecret)) return sendJson(res, 401, { error: 'Non autorisé' });
@@ -342,9 +349,11 @@ const patternRoutes = [
       const appid = Number(rawAppid);
       if (appid < 1 || appid > 0x7fffffff || !ART_KINDS.includes(kind)) return sendJson(res, 404, { error: 'Introuvable' });
       // Données publiques : le navigateur et le CDN de Vercel gardent la redirection en cache.
+      // Chargeables hors du site : le popup de l'extension affiche la jaquette du jeu en cours.
       res.writeHead(302, {
         Location: await getArtUrl(appid, kind),
         'Cache-Control': 'public, max-age=86400, s-maxage=604800',
+        'Cross-Origin-Resource-Policy': 'cross-origin',
       });
       res.end();
     },
