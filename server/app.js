@@ -360,12 +360,13 @@ const patternRoutes = [
   ],
   [
     'GET',
-    /^\/api\/games\/(\d{1,10})$/,
+    /^\/api\/games\/(-?\d{1,10})$/,
     async (req, res, url, rawAppid) => {
       const user = await requireUser(req, res);
       if (!user) return;
       const appid = Number(rawAppid);
-      if (appid < 1 || appid > 0x7fffffff) return sendJson(res, 400, { error: 'Jeu invalide' });
+      // Négatif : jeu non-Steam (voir poller.js).
+      if (appid === 0 || Math.abs(appid) > 0x7fffffff) return sendJson(res, 400, { error: 'Jeu invalide' });
       const game = await getGameDetail(user.steamid64, appid);
       if (!game) return sendJson(res, 404, { error: 'Jeu introuvable' });
       sendJson(res, 200, game);
