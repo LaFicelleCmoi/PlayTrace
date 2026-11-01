@@ -1,5 +1,6 @@
 import { config } from './config.js';
 import { startDownloadWatcher } from './downloads.js';
+import { startShortcutWatcher } from './shortcuts.js';
 
 // Agent à lancer sur le PC qui a Steam (npm run agent) : envoie les téléchargements au site déployé.
 if (!config.agentToken) {
@@ -7,18 +8,19 @@ if (!config.agentToken) {
   process.exit(1);
 }
 
-const endpoint = `${config.agentUrl}/api/agent/downloads`;
-console.log(`[agent] envoi des téléchargements vers ${endpoint}`);
+console.log(`[agent] envoi des téléchargements et des jeux non-Steam vers ${config.agentUrl}`);
 
-async function send(owner, downloads) {
-  const res = await fetch(endpoint, {
+async function post(path, body) {
+  const res = await fetch(`${config.agentUrl}${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${config.agentToken}` },
-    body: JSON.stringify({ owner, downloads }),
+    body: JSON.stringify(body),
     signal: AbortSignal.timeout(10_000),
   });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (!res.ok) throw new Error(`${path} : HTTP ${res.status}`);
 }
+
+const send = (owner, downloads) => post('/api/agent/downloads', { owner, downloads });
 
 startDownloadWatcher(async (next, previous) => {
   try {
@@ -27,4 +29,8 @@ startDownloadWatcher(async (next, previous) => {
   } catch (error) {
     console.error('[agent]', error.message);
   }
+});
+
+startShortcutWatcher(async (owner, name) => {
+  await post('/api/agent/game', { owner, name });
 });
