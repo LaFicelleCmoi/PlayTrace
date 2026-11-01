@@ -313,6 +313,7 @@ Sans extension, le bouton **Mode PiP** est aussi sur le site, dans le bandeau «
 | `GET` | `/api/duel/:steamid` | Duel avec un profil public |
 | `GET` | `/api/cron/poll` | Sondage Steam (jeton `CRON_SECRET`) |
 | `POST` | `/api/agent/downloads` | Téléchargements envoyés par l'agent (jeton `AGENT_TOKEN`) |
+| `POST` | `/api/agent/game` | Raccourci non-Steam en cours, signalé par l'agent (jeton `AGENT_TOKEN`) |
 
 </details>
 
@@ -326,7 +327,8 @@ PlayTrace/
 ├── server/
 │   ├── app.js                # routes, communes au local et à Vercel
 │   ├── index.js              # serveur Node local (sondage + SSE continus)
-│   ├── agent.js              # agent local des téléchargements
+│   ├── agent.js              # agent local : téléchargements et jeux non-Steam
+│   ├── shortcuts.js          # raccourci non-Steam en cours sur le PC
 │   ├── poller.js · sessions.js · stats.js
 │   ├── games.js · library.js · social.js
 │   ├── steam.js              # API Web Steam et Store
@@ -351,7 +353,7 @@ PlayTrace/
 ## ⚠️ Bon à savoir
 
 - Le **profil Steam** et les **détails des jeux** doivent être **publics** (Steam → Modifier le profil → Confidentialité) pour la détection du jeu en cours et les succès.
-- Les **jeux non-Steam** ajoutés à ta bibliothèque Steam sont suivis s'ils sont **lancés depuis Steam** (nom, chrono, sessions, statistiques), sans jaquette, succès ni compteur Steam. Un jeu lancé hors de Steam reste invisible : Steam ne le signale pas.
+- Les **jeux non-Steam** lancés **depuis Steam** ne sont suivis que si `npm run agent` tourne sur le PC Windows qui a Steam : l'API Web Steam ne les signale pas, l'agent lit le raccourci en cours sur ta machine. Ils apparaissent sous le **nom du raccourci**, sans jaquette, succès ni compteur Steam. Un jeu lancé hors de Steam reste invisible.
 - L'historique précis commence **à l'activation du suivi** : un Wrapped est vraiment riche après quelques semaines.
 - Environ **100 000 requêtes / jour** par clé Steam : un sondage par minute en consomme ~1 440, quel que soit le nombre de joueurs (100 par requête).
 - Les **téléchargements** ne sont visibles que si `npm run server` ou `npm run agent` tourne sur le PC qui a Steam.
