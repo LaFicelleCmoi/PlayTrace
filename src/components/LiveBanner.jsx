@@ -3,6 +3,7 @@ import { Moon, WifiOff } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { NeonGlow } from '@/components/ui/neon-glow';
 import { GameImage } from '@/components/GameImage';
+import { PipButton } from '@/components/PipButton';
 import { useNow } from '@/hooks/useNow';
 import { formatClock, formatDateTime } from '@/lib/format';
 import { Link } from '@/lib/router';
@@ -63,7 +64,10 @@ export function LiveBanner({ status, connection }) {
                 <div className="col-span-2 flex items-baseline justify-between gap-3 border-t border-white/5 pt-3 md:col-span-1 md:block md:border-0 md:pt-0 md:text-right">
                   <p className="text-xs uppercase tracking-wider text-muted-foreground">Session en cours</p>
                   <p className="font-mono text-2xl font-semibold tabular-nums text-neon-cyan sm:text-3xl lg:text-4xl">{formatClock(elapsed)}</p>
+                  <PipButton className="hidden md:mt-3 md:inline-flex" />
                 </div>
+                {/* Sous le chrono à partir de md ; en dessous, sur sa propre ligne pour ne pas le serrer. */}
+                <PipButton className="col-span-2 justify-self-end md:hidden" />
               </div>
             </div>
           </motion.div>
@@ -80,7 +84,7 @@ export function LiveBanner({ status, connection }) {
             ) : (
               <Moon className="size-6 shrink-0 text-muted-foreground" />
             )}
-            <div>
+            <div className="min-w-0 flex-1">
               <p className="font-medium">{connection === 'closed' ? 'Connexion au direct perdue' : 'Aucun jeu détecté'}</p>
               <p className="text-sm text-muted-foreground">
                 {connection === 'closed'
@@ -88,6 +92,7 @@ export function LiveBanner({ status, connection }) {
                   : 'Lance un jeu sur Steam : il apparaîtra ici en moins d’une minute.'}
               </p>
             </div>
+            <PipButton className="shrink-0" />
           </motion.div>
         )}
       </AnimatePresence>
