@@ -17,8 +17,8 @@ import { ART_KINDS, getAchievementProgress, getArtUrl, getGameDetail, getLibrary
 import { ensureLibrary, getLibrarySummary } from './library.js';
 import { pollOnce } from './poller.js';
 import { applySecurityHeaders, clientIp, createRateLimiter, isSameOrigin } from './security.js';
-import { getLiveStatus, getRecentSessions } from './sessions.js';
-import { sendOnce, subscribe } from './sse.js';
+import { getLiveStatus, getRecentSessions, recordShortcutPresence, shortcutAppid } from './sessions.js';
+import { publish, sendOnce, subscribe } from './sse.js';
 import { serveStatic } from './static.js';
 import { getDuel, getPublicProfile } from './social.js';
 import { getYearStats } from './stats.js';
@@ -283,6 +283,25 @@ const routes = {
     }
     await saveDownloads(body.owner, body.downloads.map(sanitizeDownload).filter(Boolean));
     sendJson(res, 200, { ok: true });
+  },
+
+  // L'agent local y signale le raccourci non-Steam en cours : l'API Steam ne le dit pas.
+  'POST /api/agent/game': async (req, res) => {
+    if (!hasBearer(req, config.agentToken)) return sendJson(res, 401, { error: 'Non autorisé' });
+    let body;
+    try {
+      body = await readJsonBody(req, 2048);
+    } catch {
+      return sendJson(res, 400, { error: 'JSON invalide' });
+    }
+    const name = typeof body?.name === 'string' ? body.name.trim().slice(0, 200) : null;
+    if (!isValidSteamId(body?.owner) || (body?.name !== null && !name)) return sendJson(res, 400, { error: 'Données invalides' });
+    const owner = await getUser(body.owner);
+    // Compte inconnu ou suivi en pause (droit d'opposition) : rien n'est enregistré.
+    if (!owner || owner.tracking_paused) return sendJson(res, 200, { ok: true, recorded: false });
+    const { changed } = await recordShortcutPresence(body.owner, name && { appid: shortcutAppid(name), name });
+    if (changed && !config.serverless) publish(body.owner, 'status', await getLiveStatus(body.owner));
+    sendJson(res, 200, { ok: true, recorded: true, changed });
   },
 
   'GET /auth/steam': (req, res, url) => {
