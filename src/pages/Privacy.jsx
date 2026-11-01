@@ -4,7 +4,7 @@ import { Link } from '@/lib/router';
 
 const DATA = [
   ['Identité Steam publique', 'SteamID64, pseudo, URL de l’avatar', 'API Steam, à la connexion'],
-  ['Sessions de jeu', 'Jeu, heure de début et de fin, durée', 'Sondage Steam, chaque minute'],
+  ['Sessions de jeu', 'Jeu (y compris le nom des raccourcis non-Steam lancés depuis Steam), heure de début et de fin, durée', 'Sondage Steam, chaque minute'],
   ['Bibliothèque', 'Jeux possédés, temps de jeu total, date de dernière partie', 'API Steam (cache 1 h)'],
   ['Succès', 'Nombre de succès obtenus par jeu (et détail affiché à la demande)', 'API Steam (cache 6 h)'],
   ['Téléchargements', 'Jeux en cours de téléchargement, progression', 'Ton PC, uniquement si tu lances l’agent'],
