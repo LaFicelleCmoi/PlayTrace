@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>PlayTrace</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main id="message">
+      <h1 id="message-title">Chargement…</h1>
+      <p id="message-text"></p>
+      <a id="message-link" class="button" target="_blank" rel="noreferrer" hidden></a>
+    </main>
+
+    <main id="playing" hidden>
+      <img id="art" alt="" />
+      <div class="content">
+        <p class="live"><span class="dot"></span>EN DIRECT</p>
+        <h1><a id="game" target="_blank" rel="noreferrer"></a></h1>
+        <p id="clock"></p>
+        <p id="started"></p>
+      </div>
+    </main>
+
+    <footer>
+      <button id="pip" type="button">Mode PiP</button>
+      <a id="site" target="_blank" rel="noreferrer">Ouvrir PlayTrace</a>
+    </footer>
+
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>
