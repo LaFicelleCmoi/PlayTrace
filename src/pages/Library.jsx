@@ -139,7 +139,8 @@ function GameCard({ game, playing }) {
       </div>
       <p className="mt-2 line-clamp-2 text-sm font-semibold leading-snug">{game.name}</p>
       <p className="text-xs text-muted-foreground">
-        {game.minutes > 0 ? formatDuration(game.minutes * 60) : 'Jamais lancé'}
+        {/* Sans compteur Steam (jeu non-Steam, week-end gratuit…), le temps suivi par PlayTrace. */}
+        {game.minutes > 0 || game.trackedSeconds > 0 ? formatDuration(game.minutes * 60 || game.trackedSeconds) : 'Jamais lancé'}
         {game.lastPlayed && game.minutes > 0 && <span className="hidden sm:inline"> · {formatRelative(game.lastPlayed)}</span>}
       </p>
     </Link>
