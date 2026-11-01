@@ -267,6 +267,8 @@ Le temps de ta session reste visible sans ouvrir le site, pour **Chrome, Edge, B
 
 **Mode PiP** : icône de l'extension → *Mode PiP* → *Détacher le chrono*. Garde la petite fenêtre ouverte (tu peux la réduire), le chrono se ferme avec elle.
 
+Sans extension, le bouton **Mode PiP** est aussi sur le site, dans le bandeau « En direct » : garde alors l'onglet ouvert.
+
 > Le PiP passe au-dessus des jeux en **fenêtré** ou **plein écran sans bordure**, pas en plein écran exclusif. Le temps est compté à partir de la détection du jeu, soit jusqu'à une minute après son lancement.
 
 ---
