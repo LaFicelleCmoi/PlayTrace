@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { config } from './config.js';
 import { getGameName } from './library.js';
 import { closeStaleSessions, getLiveStatus, recordPresence } from './sessions.js';
@@ -8,16 +9,31 @@ import { listUserIds, updateProfile } from './users.js';
 // Une session sans confirmation pendant 3 sondages est considérée comme terminée.
 // Sur Vercel, le sondage est déclenché chaque minute par un cron externe (GET /api/cron/poll).
 const STALE_AFTER_MS = config.pollIntervalMs * 3;
+const MAX_STEAM_APPID = 0x7fffffff;
+const MAX_NAME_LENGTH = 200;
 
 let timer = null;
 let running = false;
 
+/**
+ * Identifiant d'un jeu non-Steam : négatif pour ne jamais croiser un vrai appid, et stable
+ * pour qu'un même raccourci cumule ses sessions. Tient dans la colonne INTEGER.
+ */
+function shortcutAppid(key) {
+  const hash = createHash('sha256').update(key).digest().readUInt32BE(0) & 0x7fffffff;
+  return -(hash || 1);
+}
+
 async function currentGame(player) {
+  const shownName = player.gameextrainfo?.trim().slice(0, MAX_NAME_LENGTH) || null;
   const appid = Number(player.gameid);
-  // Les jeux hors Steam ont un gameid 64 bits sans fiche Steam : on les ignore.
-  if (!player.gameid || !Number.isSafeInteger(appid) || appid <= 0 || appid > 0x7fffffff) return null;
-  const name = (player.gameextrainfo || (await getGameName(player.steamid, appid)) || `App ${appid}`).trim();
-  return { appid, name };
+  if (Number.isSafeInteger(appid) && appid > 0 && appid <= MAX_STEAM_APPID) {
+    return { appid, name: shownName || (await getGameName(player.steamid, appid))?.trim() || `App ${appid}` };
+  }
+  // Raccourci lancé depuis Steam : gameid 64 bits sans fiche Steam, ou nom seul.
+  const gameid = player.gameid && player.gameid !== '0' ? player.gameid : null;
+  if (!shownName && !gameid) return null;
+  return { appid: shortcutAppid(shownName ?? gameid), name: shownName ?? 'Jeu non-Steam' };
 }
 
 async function broadcastStatus(steamid) {
