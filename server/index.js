@@ -4,6 +4,8 @@ import { config } from './config.js';
 import { sql } from './db.js';
 import { saveDownloads, startDownloadWatcher, stopDownloadWatcher } from './downloads.js';
 import { startPoller, stopPoller } from './poller.js';
+import { getLiveStatus, recordShortcutPresence, shortcutAppid } from './sessions.js';
+import { startShortcutWatcher, stopShortcutWatcher } from './shortcuts.js';
 import { closeAllStreams, publish } from './sse.js';
 
 // Serveur Node local : sondage en continu et flux SSE ouverts. Sur Vercel, c'est api/index.js qui sert les requêtes.
@@ -27,11 +29,16 @@ server.listen(config.port, config.host, () => {
       console.error('[downloads]', error.message);
     }
   });
+  startShortcutWatcher(async (owner, name) => {
+    const { changed } = await recordShortcutPresence(owner, name && { appid: shortcutAppid(name), name });
+    if (changed) publish(owner, 'status', await getLiveStatus(owner));
+  });
 });
 
 function shutdown() {
   stopPoller();
   stopDownloadWatcher();
+  stopShortcutWatcher();
   closeAllStreams();
   server.close(() => {
     sql.end().finally(() => process.exit(0));
