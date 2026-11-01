@@ -1,7 +1,6 @@
-import { createHash } from 'node:crypto';
 import { config } from './config.js';
 import { getGameName } from './library.js';
-import { closeStaleSessions, getLiveStatus, recordPresence } from './sessions.js';
+import { closeStaleSessions, getLiveStatus, recordPresence, shortcutAppid } from './sessions.js';
 import { publish } from './sse.js';
 import { getPlayerSummaries } from './steam.js';
 import { listUserIds, updateProfile } from './users.js';
@@ -15,22 +14,14 @@ const MAX_NAME_LENGTH = 200;
 let timer = null;
 let running = false;
 
-/**
- * Identifiant d'un jeu non-Steam : négatif pour ne jamais croiser un vrai appid, et stable
- * pour qu'un même raccourci cumule ses sessions. Tient dans la colonne INTEGER.
- */
-function shortcutAppid(key) {
-  const hash = createHash('sha256').update(key).digest().readUInt32BE(0) & 0x7fffffff;
-  return -(hash || 1);
-}
-
 async function currentGame(player) {
   const shownName = player.gameextrainfo?.trim().slice(0, MAX_NAME_LENGTH) || null;
   const appid = Number(player.gameid);
   if (Number.isSafeInteger(appid) && appid > 0 && appid <= MAX_STEAM_APPID) {
     return { appid, name: shownName || (await getGameName(player.steamid, appid))?.trim() || `App ${appid}` };
   }
-  // Raccourci lancé depuis Steam : gameid 64 bits sans fiche Steam, ou nom seul.
+  // Steam peut signaler un raccourci (gameid 64 bits ou nom seul), mais le plus souvent il ne renvoie rien :
+  // c'est alors l'agent local qui le détecte (voir shortcuts.js).
   const gameid = player.gameid && player.gameid !== '0' ? player.gameid : null;
   if (!shownName && !gameid) return null;
   return { appid: shortcutAppid(shownName ?? gameid), name: shownName ?? 'Jeu non-Steam' };
