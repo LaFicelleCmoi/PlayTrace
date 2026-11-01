@@ -46,3 +46,44 @@ export function parseVdf(text) {
 
   return root;
 }
+
+const BINARY_MAP = 0;
+const BINARY_STRING = 1;
+const BINARY_INT32 = 2;
+const BINARY_END = 8;
+
+/** Parseur du format binaire de Valve (`shortcuts.vdf`). Clés en minuscules, comme `parseVdf`. */
+export function parseBinaryVdf(buffer) {
+  let offset = 0;
+
+  const readString = () => {
+    const end = buffer.indexOf(0, offset);
+    if (end === -1) throw new Error('VDF binaire tronqué');
+    const value = buffer.toString('utf8', offset, end);
+    offset = end + 1;
+    return value;
+  };
+
+  const readMap = () => {
+    const map = {};
+    while (offset < buffer.length) {
+      const type = buffer[offset];
+      offset += 1;
+      if (type === BINARY_END) return map;
+      const key = readString().toLowerCase();
+      if (type === BINARY_MAP) {
+        map[key] = readMap();
+      } else if (type === BINARY_STRING) {
+        map[key] = readString();
+      } else if (type === BINARY_INT32) {
+        map[key] = buffer.readUInt32LE(offset);
+        offset += 4;
+      } else {
+        throw new Error(`VDF binaire : type ${type} inconnu`);
+      }
+    }
+    return map;
+  };
+
+  return readMap();
+}
