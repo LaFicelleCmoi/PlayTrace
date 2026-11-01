@@ -31,7 +31,7 @@ export function matchRoute(pathname) {
   if (/^\/compte\/?$/.test(pathname)) return { page: 'account' };
   if (/^\/confidentialite\/?$/.test(pathname)) return { page: 'privacy' };
   if (/^\/mentions-legales\/?$/.test(pathname)) return { page: 'legal' };
-  const game = /^\/jeux\/(\d{1,10})\/?$/.exec(pathname);
+  const game = /^\/jeux\/(-?\d{1,10})\/?$/.exec(pathname);
   if (game) return { page: 'game', appid: Number(game[1]) };
   const player = /^\/joueur\/(7656119\d{10})\/?$/.exec(pathname);
   if (player) return { page: 'public', steamid: player[1] };
