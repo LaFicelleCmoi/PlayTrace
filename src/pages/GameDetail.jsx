@@ -148,15 +148,17 @@ export function GameDetail({ appid, live }) {
               </div>
             )}
           </div>
-          <a
-            href={`https://store.steampowered.com/app/${appid}/`}
-            target="_blank"
-            rel="noreferrer noopener"
-            className={cn(buttonVariants({ variant: 'outline' }), 'shrink-0 bg-background/60 backdrop-blur')}
-          >
-            Page Steam
-            <ExternalLink />
-          </a>
+          {appid > 0 && (
+            <a
+              href={`https://store.steampowered.com/app/${appid}/`}
+              target="_blank"
+              rel="noreferrer noopener"
+              className={cn(buttonVariants({ variant: 'outline' }), 'shrink-0 bg-background/60 backdrop-blur')}
+            >
+              Page Steam
+              <ExternalLink />
+            </a>
+          )}
         </div>
       </motion.section>
 
