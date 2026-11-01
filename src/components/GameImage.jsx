@@ -11,7 +11,8 @@ const FALLBACKS = {
 
 export function GameImage({ appid, kind = 'header', alt, className }) {
   const [index, setIndex] = useState(0);
-  const chain = FALLBACKS[kind];
+  // Un jeu non-Steam (appid négatif) n'a aucun visuel à demander.
+  const chain = appid > 0 ? FALLBACKS[kind] : [];
 
   if (index >= chain.length) {
     return <div aria-hidden className={cn('bg-gradient-to-br from-neon-violet/30 via-secondary to-neon-cyan/20', className)} />;
