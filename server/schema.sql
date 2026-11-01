@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS playtrace.users (
 CREATE TABLE IF NOT EXISTS playtrace.sessions (
   id           BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   steamid64    TEXT NOT NULL REFERENCES playtrace.users (steamid64) ON DELETE CASCADE,
+  -- Négatif pour un jeu non-Steam lancé depuis Steam (identifiant calculé dans poller.js).
   appid        INTEGER NOT NULL,
   game_name    TEXT NOT NULL,
   started_at   TIMESTAMPTZ NOT NULL,
